@@ -9,9 +9,13 @@ drive them:
 | Chat model | `app/agents/python_copilot.py` | One request, one complete answer |
 | Streaming chat model | `app/agents/streaming_copilot.py` | The same answer, sent token by token as it is produced |
 
+A FastAPI backend serves the agents; a Next.js frontend drives them.
+
 ## Getting started
 
-Requires Python 3.13+ and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.13+, [uv](https://docs.astral.sh/uv/), and Node 20+.
+
+**Backend** — in one terminal:
 
 ```bash
 cd backend
@@ -22,6 +26,18 @@ uv run uvicorn app.main:app --reload
 
 The API is then on <http://127.0.0.1:8000>, with interactive docs at
 <http://127.0.0.1:8000/docs>.
+
+**Frontend** — in another:
+
+```bash
+cd frontend
+cp .env.example .env.local  # defaults to the backend above
+npm install
+npm run dev
+```
+
+The interface is then on <http://localhost:3000>. It needs the backend running;
+the sidebar shows a live indicator either way.
 
 ## Endpoints
 
@@ -103,6 +119,16 @@ backend/
     └── routers/
         ├── weather.py
         └── copilot.py
+
+frontend/
+├── app/
+│   ├── layout.tsx           # fonts, theme applied before first paint
+│   ├── page.tsx             # sidebar shell, one panel per agent
+│   └── globals.css          # design tokens for both themes
+├── components/              # panels, primitives, markdown renderer
+└── lib/
+    ├── api.ts               # typed client, including the SSE reader
+    └── types.ts             # mirrors the backend schemas
 ```
 
 `WeatherResponse` in `schemas.py` is both the HTTP response model and the agent's
@@ -119,3 +145,7 @@ defined once.
 - The OpenAI key is passed explicitly to `init_chat_model`. pydantic-settings reads `.env`
   into the settings object but does not export the values into `os.environ`, where
   LangChain would otherwise look for them.
+- Frontend colours are semantic CSS variables rather than Tailwind `dark:` variants, so a
+  theme change is one swap of values and components stay theme-agnostic. The choice is
+  applied by an inline script before first paint, so the page never renders in the wrong
+  theme and then corrects itself.
