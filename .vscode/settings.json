@@ -1,0 +1,7 @@
+{
+  // The Python project lives in backend/, not at the repo root
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  // So that "from app.config import ..." resolves
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+  "python.analysis.typeCheckingMode": "standard"
+}
