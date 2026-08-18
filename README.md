@@ -1,7 +1,12 @@
 # LangChain Playground
 
-Three LangChain patterns, each built the same way and served over HTTP so a frontend can
-drive them:
+A full-stack reference implementation of three distinct LLM integration patterns, built to
+make the differences between them visible and comparable side by side.
+
+**Stack:** FastAPI · LangChain · LangGraph · Python 3.13 · Next.js 16 · React 19 ·
+TypeScript · Tailwind CSS v4
+
+![Home](docs/images/01-home.jpg)
 
 | Pattern | Module | What it demonstrates |
 | --- | --- | --- |
@@ -9,7 +14,45 @@ drive them:
 | Chat model | `app/agents/python_copilot.py` | One request, one complete answer |
 | Streaming chat model | `app/agents/streaming_copilot.py` | The same answer, sent token by token as it is produced |
 
-A FastAPI backend serves the agents; a Next.js frontend drives them.
+---
+
+## The three patterns
+
+### 1. Tool-calling agent
+
+The caller sends only a user id. The agent calls `locate_user` to resolve that id to a
+city, then feeds the result into `get_weather`, which hits a live weather API. The model
+decides both calls and their order; nothing in the request names a city.
+
+Output is a **typed structure**, not prose — the same Pydantic model serves as the HTTP
+response schema and the agent's `response_format`.
+
+![Tool-calling agent](docs/images/02-weather-agent.jpg)
+
+### 2. Chat model
+
+No tools, no agent loop. A seeded system/human/AI exchange steers tone and depth, then one
+`ainvoke` returns the complete answer.
+
+![Chat model](docs/images/03-chat-model.jpg)
+
+### 3. Streaming chat model
+
+The same model driven by `astream`. Tokens are pushed to the browser over server-sent
+events and rendered as they arrive; the request can be cancelled mid-flight.
+
+![Streaming chat model](docs/images/04-streaming.jpg)
+
+### Handling the failure case honestly
+
+An unrecognised user id resolves to `Unknown`. Rather than let the model invent a
+plausible `0.0`, the schema makes every reading nullable, so a failed lookup returns
+`null` and the interface has to show it. That constraint propagates through the generated
+TypeScript types, forcing the frontend to handle it too.
+
+![Unknown user, light theme](docs/images/05-unknown-user-light.jpg)
+
+---
 
 ## Getting started
 
@@ -135,17 +178,63 @@ frontend/
 `response_format`, so the API contract and the structure the model must fill in are
 defined once.
 
-## Notes
+## Technical decisions
 
-- Everything is async (`ainvoke`/`astream`, `httpx` rather than `requests`) so one slow
-  weather lookup cannot stall the event loop.
-- Conversation memory uses an in-process `InMemorySaver`. That is fine for development,
-  but history is lost on restart and is not shared between workers — swap in a
-  database-backed checkpointer before running more than one process.
-- The OpenAI key is passed explicitly to `init_chat_model`. pydantic-settings reads `.env`
-  into the settings object but does not export the values into `os.environ`, where
-  LangChain would otherwise look for them.
-- Frontend colours are semantic CSS variables rather than Tailwind `dark:` variants, so a
-  theme change is one swap of values and components stay theme-agnostic. The choice is
-  applied by an inline script before first paint, so the page never renders in the wrong
-  theme and then corrects itself.
+### One schema, two jobs
+
+`WeatherResponse` is simultaneously the FastAPI `response_model` and the LangChain agent's
+`response_format`. The structure the model is required to fill in and the contract the API
+publishes cannot drift apart, because they are the same class. `lib/types.ts` mirrors it
+on the frontend, so a nullable reading in Python is a `number | null` in TypeScript.
+
+### Async all the way down
+
+`ainvoke` and `astream` rather than their blocking counterparts, and `httpx.AsyncClient`
+rather than `requests` inside the weather tool. A synchronous HTTP call in a tool blocks
+the event loop for its full duration, so one slow upstream lookup would stall every other
+in-flight request on the worker.
+
+### Identity separated from conversation
+
+`user_id` identifies the person; `thread_id` identifies the conversation. The original
+script conflated them, which meant every user had exactly one eternal conversation and a
+second caller could inherit the first one's context. Splitting them lets one user hold
+several independent threads and keeps checkpointed state correctly partitioned.
+
+### Streaming as a transport concern
+
+The agent layer exposes an `AsyncIterator[str]`; the router decides it becomes SSE. Each
+token is JSON-encoded before being written to the wire, because a raw token may contain a
+newline and newlines are the SSE message delimiter — a subtlety that silently corrupts
+naive implementations. The client reassembles the stream with a buffer that splits on the
+blank-line delimiter and holds back any trailing partial message for the next chunk.
+
+### Configuration and secrets
+
+Settings are typed and validated at startup via pydantic-settings, so a missing key fails
+immediately with a clear message rather than at first request. The API key is passed
+explicitly to `init_chat_model`: pydantic-settings reads `.env` into the settings object
+but does not export values into `os.environ`, where LangChain would otherwise look — a
+failure mode worth knowing about, since the resulting error points at credentials rather
+than at configuration.
+
+### Theming without variant sprawl
+
+Frontend colours are semantic CSS variables (`--surface`, `--text-muted`) rather than
+Tailwind `dark:` variants, so a theme change swaps values in one place instead of touching
+every component. The stored choice is applied by an inline script before first paint, so
+the page never renders in the wrong theme and corrects itself. `ThemeToggle` reads
+`<html data-theme>` through `useSyncExternalStore` rather than mirroring it into React
+state, keeping a single source of truth.
+
+## Known limitations
+
+Deliberate scope boundaries rather than oversights:
+
+- **`InMemorySaver` for conversation state.** Process-local: history is lost on restart and
+  is not shared across workers. Production would use a database-backed checkpointer; the
+  interface is identical, so it is a one-line swap.
+- **No authentication.** `user_id` arrives in the request body. Real deployment would take
+  it from a verified session, not from the client.
+- **No test suite.** The tradeoff was made consciously to keep the project focused on
+  demonstrating the three patterns.
