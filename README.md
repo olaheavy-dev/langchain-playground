@@ -171,6 +171,11 @@ Then point the frontend at it with `NEXT_PUBLIC_API_URL`. That value is inlined
 into the client bundle at build time, so it is a build argument rather than a
 runtime variable — changing it means rebuilding.
 
+The knowledge base is embedded at startup rather than on first use, so a machine waking from
+scale-to-zero pays the ~2.7s rather than the visitor who woke it. Set `WARM_KNOWLEDGE_BASE=0`
+for a reload-driven dev loop, where it is otherwise paid on every restart for a corpus that
+has not changed.
+
 **Before putting it on the internet:** every `/api` route calls a paid model and
 none of them asks who is calling. Set a spend cap on the key. The built-in rate
 limiter (20 requests per minute per client, `RATE_LIMIT_PER_MINUTE`) caps a
@@ -517,6 +522,18 @@ for every later turn. The agent needs today's numbers, which is about 30 tokens'
 
 The cost of a tool result is easy to miss because nothing in the code looks expensive: it
 is one `response.json()`.
+
+### Paying for the vector store at startup
+
+Built lazily, the first search embedded the whole corpus: 2.7s against 200ms for every
+search after it — visible as a single fat `kb_search` segment in the trace, which is how it
+was noticed. The work has to happen either way, but startup is a better place for it: a
+health check gates traffic until it is done, so with scale-to-zero the machine waking pays
+rather than the first visitor.
+
+Deliberately not fatal. Three of the four endpoints never touch the vector store, so a bad
+key or a network blip at startup would otherwise take the weather agent and both copilots
+down with it. A failure is logged and the first search falls back to building it lazily.
 
 ### Timing as middleware
 

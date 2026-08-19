@@ -36,7 +36,7 @@ class FakeStore:
 def store(monkeypatch: pytest.MonkeyPatch):
     def install(hits: list[tuple[str, float]]) -> FakeStore:
         fake = FakeStore(hits)
-        monkeypatch.setattr(rag, '_get_store', lambda: fake)
+        monkeypatch.setattr(rag, 'get_store', lambda: fake)
         return fake
 
     return install
@@ -116,7 +116,7 @@ def test_a_failing_search_answers_the_model_instead_of_raising(
         def similarity_search_with_score(self, query: str, k: int):
             raise RuntimeError('index unavailable')
 
-    monkeypatch.setattr(rag, '_get_store', lambda: BrokenStore())
+    monkeypatch.setattr(rag, 'get_store', lambda: BrokenStore())
     rag._sources.set([])
     _timings.set([])
 
@@ -137,7 +137,7 @@ def test_a_failing_search_is_logged(
         def similarity_search_with_score(self, query: str, k: int):
             raise RuntimeError('index unavailable')
 
-    monkeypatch.setattr(rag, '_get_store', lambda: BrokenStore())
+    monkeypatch.setattr(rag, 'get_store', lambda: BrokenStore())
     rag._sources.set([])
     _timings.set([])
 

@@ -43,7 +43,7 @@ _sources: ContextVar[list[Source]] = ContextVar('sources')
 
 
 @lru_cache
-def _get_store() -> InMemoryVectorStore:
+def get_store() -> InMemoryVectorStore:
     """Embedded once on first use rather than at import, so the module can be
     imported without an API key present.
 
@@ -66,7 +66,7 @@ def _get_store() -> InMemoryVectorStore:
 def kb_search(query: str) -> str:
     """Return the passages closest to the query, and remember them for display."""
     try:
-        hits = _get_store().similarity_search_with_score(query, k=RETRIEVE_COUNT)
+        hits = get_store().similarity_search_with_score(query, k=RETRIEVE_COUNT)
         collected = _sources.get(None)
         if collected is not None:
             collected.extend(
