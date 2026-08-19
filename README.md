@@ -4,7 +4,7 @@ A full-stack reference implementation of three distinct LLM integration patterns
 make the differences between them visible and comparable side by side.
 
 **Stack:** FastAPI · LangChain · LangGraph · Python 3.13 · Next.js 16 · React 19 ·
-TypeScript · Tailwind CSS v4
+TypeScript · Tailwind CSS v4 · pytest · Vitest
 
 ![Home](docs/images/01-home.jpg)
 
@@ -145,23 +145,57 @@ data: [DONE]
 Tokens are JSON-encoded because a token may contain a newline, and newlines are what
 separate one SSE message from the next.
 
+## Tests
+
+75 tests, none of which call a model or the network.
+
+```bash
+cd backend  && uv run pytest      # 29 tests
+cd frontend && npm test           # 46 tests
+```
+
+**Backend** — `pytest` with `pytest-asyncio`, driving the app in-process through
+`httpx.ASGITransport`, so no port is bound and no server needs to be running.
+
+The model is stubbed at the router boundary. Calling it for real would cost money, need a
+live key, and answer differently every run -- none of which tells you whether the wiring
+is right. What is asserted instead is everything around it: that `user_id` and `thread_id`
+arrive separately, that null readings survive serialisation as `null` rather than `0.0`,
+that a token containing a newline still crosses the wire as one SSE event, and that the
+stream always terminates with `[DONE]`.
+
+The agent's own tools are tested for real. `locate_user` is called with a hand-built
+`ToolRuntime`, and `get_weather` runs its actual httpx code against a `MockTransport` --
+including the 503 case, where `raise_for_status` is what stops an error page being handed
+to the model as though it were weather data.
+
+**Frontend** — Vitest, jsdom and Testing Library, querying by role and visible text rather
+than by class name, so a restyle does not break the suite.
+
+The SSE reader gets the awkward cases: an event split across two network chunks, a token
+containing newlines, a malformed payload that must be skipped rather than kill the stream,
+and data arriving after `[DONE]`. The panels are tested through the interface -- clicking
+`NOPE999` must produce three em dashes and no `0`, pressing Stop must actually abort the
+signal, and unmounting mid-stream must not leave a request in flight.
+
 ## Layout
 
 ```
 backend/
 ├── pyproject.toml
-└── app/
-    ├── main.py              # FastAPI app, CORS
-    ├── config.py            # settings, read from .env
-    ├── schemas.py           # request/response models
-    ├── agents/
-    │   ├── base.py          # shared chat model factory
-    │   ├── weather.py
-    │   ├── python_copilot.py
-    │   └── streaming_copilot.py
-    └── routers/
-        ├── weather.py
-        └── copilot.py
+├── app/
+│   ├── main.py              # FastAPI app, CORS
+│   ├── config.py            # settings, read from .env
+│   ├── schemas.py           # request/response models
+│   ├── agents/
+│   │   ├── base.py          # shared chat model factory
+│   │   ├── weather.py
+│   │   ├── python_copilot.py
+│   │   └── streaming_copilot.py
+│   └── routers/
+│       ├── weather.py
+│       └── copilot.py
+└── tests/                   # pytest, driven in-process over ASGI
 
 frontend/
 ├── app/
@@ -169,9 +203,10 @@ frontend/
 │   ├── page.tsx             # sidebar shell, one panel per agent
 │   └── globals.css          # design tokens for both themes
 ├── components/              # panels, primitives, markdown renderer
-└── lib/
-    ├── api.ts               # typed client, including the SSE reader
-    └── types.ts             # mirrors the backend schemas
+├── lib/
+│   ├── api.ts               # typed client, including the SSE reader
+│   └── types.ts             # mirrors the backend schemas
+└── vitest.config.mts        # tests live beside what they test, as *.test.tsx
 ```
 
 `WeatherResponse` in `schemas.py` is both the HTTP response model and the agent's
@@ -236,5 +271,6 @@ Deliberate scope boundaries rather than oversights:
   interface is identical, so it is a one-line swap.
 - **No authentication.** `user_id` arrives in the request body. Real deployment would take
   it from a verified session, not from the client.
-- **No test suite.** The tradeoff was made consciously to keep the project focused on
-  demonstrating the three patterns.
+- **No end-to-end test.** The suite covers each side of the boundary but never runs the
+  two together against a live model, so a schema change that breaks the contract would
+  pass both halves. A Playwright run against a recorded backend would close that gap.

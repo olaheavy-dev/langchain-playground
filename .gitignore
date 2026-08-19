@@ -217,3 +217,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 .env.local
+
+# The Python build-artifact rules above are unanchored, so lib/ also matches
+# frontend/lib/ -- the app's own source. Exempt the frontend, which has its own
+# .gitignore.
+!frontend/lib/
