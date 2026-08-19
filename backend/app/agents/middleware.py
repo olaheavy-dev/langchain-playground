@@ -16,7 +16,13 @@ import time
 
 from langchain.agents.middleware import AgentMiddleware
 
-from app.agents.timing import Usage, record, record_usage
+from app.agents.progress import Step, emit
+from app.agents.timing import Usage, record, record_usage, since_start
+
+
+def _announce(label: str, started: float) -> None:
+    """Tell anyone watching that a step just finished."""
+    emit(Step(label=label, ms=(time.perf_counter() - started) * 1000, start_ms=since_start(started)))
 
 
 def _record_usage_from(response) -> None:
@@ -57,6 +63,7 @@ class TracingMiddleware(AgentMiddleware):
             # consumed the time, and dropping it would inflate whatever segment
             # the remainder lands in.
             record('model', started)
+            _announce('model', started)
 
         _record_usage_from(response)
         return response
@@ -67,3 +74,4 @@ class TracingMiddleware(AgentMiddleware):
             return await handler(request)
         finally:
             record(request.tool_call['name'], started)
+            _announce(request.tool_call['name'], started)

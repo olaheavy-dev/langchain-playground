@@ -66,6 +66,11 @@ def record(label: str, started: float) -> None:
     )
 
 
+def since_start(moment: float) -> float:
+    """Milliseconds from the start of this request's trace to the given moment."""
+    return (moment - _trace_start.get(moment)) * 1000
+
+
 def record_usage(usage: Usage) -> None:
     """Note what a model call consumed, if anyone is collecting."""
     collected = _usage.get(None)

@@ -1,17 +1,17 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchWeather } from "@/lib/api";
+import { ApiError, streamWeather } from "@/lib/api";
 import { WeatherPanel } from "./WeatherPanel";
 
 // The real ApiError class is kept, because the panel branches on `instanceof`.
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
-  fetchWeather: vi.fn(),
+  streamWeather: vi.fn(),
 }));
 
-const mockFetchWeather = vi.mocked(fetchWeather);
+const mockStream = vi.mocked(streamWeather);
 
 const LOCATED = {
   summary: "Vienna is a brisk 17 degrees.",
@@ -34,7 +34,7 @@ const UNLOCATED = {
 };
 
 beforeEach(() => {
-  mockFetchWeather.mockReset();
+  mockStream.mockReset();
 });
 
 describe("WeatherPanel", () => {
@@ -48,20 +48,20 @@ describe("WeatherPanel", () => {
   });
 
   it("sends the selected id with its own thread, and never a city", async () => {
-    mockFetchWeather.mockResolvedValue(LOCATED);
+    mockStream.mockResolvedValue(LOCATED);
     render(<WeatherPanel />);
 
     await userEvent.click(screen.getByRole("radio", { name: /HJKL111/ }));
     await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
 
-    await waitFor(() => expect(mockFetchWeather).toHaveBeenCalledTimes(1));
-    const [request] = mockFetchWeather.mock.calls[0];
+    await waitFor(() => expect(mockStream).toHaveBeenCalledTimes(1));
+    const [request] = mockStream.mock.calls[0];
     expect(request).toEqual({ user_id: "HJKL111", thread_id: "thread-HJKL111" });
     expect(JSON.stringify(request)).not.toContain("Paris");
   });
 
   it("shows the summary and each reading", async () => {
-    mockFetchWeather.mockResolvedValue(LOCATED);
+    mockStream.mockResolvedValue(LOCATED);
     render(<WeatherPanel />);
 
     await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
@@ -74,7 +74,7 @@ describe("WeatherPanel", () => {
 
   it("shows a dash and explains itself when the readings are null", async () => {
     // Rather than rendering "0", which would read as a genuine measurement.
-    mockFetchWeather.mockResolvedValue(UNLOCATED);
+    mockStream.mockResolvedValue(UNLOCATED);
     render(<WeatherPanel />);
 
     await userEvent.click(screen.getByRole("radio", { name: /NOPE999/ }));
@@ -86,8 +86,12 @@ describe("WeatherPanel", () => {
     expect(screen.getByText(/could not place this user/i)).toBeInTheDocument();
   });
 
-  it("draws the trace from the server's measurements, not from guesses", async () => {
-    mockFetchWeather.mockResolvedValue(LOCATED);
+  it("draws the trace from the steps the server reports, not from guesses", async () => {
+    mockStream.mockImplementation(async (_request, onStep) => {
+      onStep({ label: "get_weather", ms: 812, start_ms: 20 });
+      onStep({ label: "model", ms: 1440, start_ms: 840 });
+      return LOCATED;
+    });
     render(<WeatherPanel />);
 
     await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
@@ -100,8 +104,32 @@ describe("WeatherPanel", () => {
     expect(rail).toHaveAccessibleName(/model, 1\.4s/);
   });
 
+  it("shows steps while the agent is still working", async () => {
+    // The point of streaming the run: an agent that takes several seconds
+    // should say which step it is on rather than showing a spinner.
+    let report: ((step: { label: string; ms: number; start_ms: number }) => void) | undefined;
+    mockStream.mockImplementation(
+      (_request, onStep) =>
+        new Promise(() => {
+          report = onStep;
+        }),
+    );
+    render(<WeatherPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
+    await waitFor(() => expect(report).toBeDefined());
+
+    act(() => report!({ label: "locate_user", ms: 1, start_ms: 1020 }));
+
+    // "locate_user" also appears in the explanatory prose above, so this asks
+    // the rail rather than the page.
+    expect(await screen.findByText("Working")).toBeInTheDocument();
+    const rail = screen.getByRole("img", { name: /arrival trace/i });
+    expect(rail).toHaveAccessibleName(/locate_user, 1ms/);
+  });
+
   it("reports a failure instead of leaving the spinner running", async () => {
-    mockFetchWeather.mockRejectedValue(new ApiError("The API is down."));
+    mockStream.mockRejectedValue(new ApiError("The API is down."));
     render(<WeatherPanel />);
 
     await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
@@ -115,8 +143,8 @@ describe("WeatherPanel", () => {
     // panels running against a dead component. The request is held open, so
     // it is genuinely in flight at the moment of unmount.
     let signal: AbortSignal | undefined;
-    mockFetchWeather.mockImplementation(
-      (_request, received) =>
+    mockStream.mockImplementation(
+      (_request, _onStep, received) =>
         new Promise(() => {
           signal = received;
         }),
@@ -131,8 +159,8 @@ describe("WeatherPanel", () => {
   });
 
   it("clears the previous result before the next request resolves", async () => {
-    mockFetchWeather.mockResolvedValueOnce(LOCATED);
-    mockFetchWeather.mockRejectedValueOnce(new ApiError("The API is down."));
+    mockStream.mockResolvedValueOnce(LOCATED);
+    mockStream.mockRejectedValueOnce(new ApiError("The API is down."));
     render(<WeatherPanel />);
 
     await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));

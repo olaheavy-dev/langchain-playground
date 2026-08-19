@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { ApiError, fetchWeather } from "@/lib/api";
+import { ApiError, streamWeather } from "@/lib/api";
 import { KNOWN_USERS, type WeatherResponse } from "@/lib/types";
 import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, cx } from "./ui";
@@ -63,25 +63,34 @@ export function WeatherPanel() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setTrace(null);
+    setTrace([]);
+    setUsage(null);
     const startedAt = performance.now();
+    const steps: TraceSegment[] = [];
     try {
-      // One thread per user, so each user keeps their own conversation.
-      const reply = await fetchWeather(
+      // Streamed rather than awaited: the agent takes several seconds and a
+      // spinner says nothing about which step is slow. Offsets stay relative to
+      // the server's start -- the leading gap is the time on the wire, which
+      // needs no segment of its own to be visible.
+      const reply = await streamWeather(
+        // One thread per user, so each user keeps their own conversation.
         { user_id: userId, thread_id: `thread-${userId}` },
+        (step) => {
+          steps.push({
+            label: step.label,
+            ms: step.ms,
+            startMs: step.start_ms,
+            // Tool calls are the agent reaching outside itself: drawn hollow so
+            // the model's own share is legible at a glance.
+            hollow: step.label !== "model",
+          });
+          setTrace([...steps]);
+          setTotalMs(performance.now() - startedAt);
+        },
         controller.signal,
       );
       setResult(reply);
-      // Every segment is measured. The server reports each tool call and the
-      // model's share; the client can additionally see the network time the
-      // server cannot, which is the round trip minus everything it accounted
-      // for.
-      const roundTrip = performance.now() - startedAt;
-      const serverMs = reply.trace?.total_ms ?? 0;
-      // The server reports offsets from its own start, so everything it did
-      // shifts along by the time the request spent on the wire.
-      const networkMs = Math.max(roundTrip - serverMs, 0);
-      setTotalMs(roundTrip);
+      setTotalMs(performance.now() - startedAt);
       if (reply.trace) {
         setUsage({
           inputTokens: reply.trace.input_tokens,
@@ -90,17 +99,6 @@ export function WeatherPanel() {
           costUsd: reply.trace.cost_usd,
         });
       }
-      setTrace([
-        { label: "network", ms: networkMs, startMs: 0 },
-        ...(reply.trace?.segments ?? []).map((segment) => ({
-          label: segment.label,
-          ms: segment.ms,
-          startMs: networkMs + segment.start_ms,
-          // Tool calls are the agent reaching outside itself: drawn hollow so
-          // the model's own share is legible at a glance.
-          hollow: segment.label !== "model",
-        })),
-      ]);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(
@@ -177,6 +175,13 @@ export function WeatherPanel() {
           {error && <ErrorNote message={error} />}
         </div>
       </Card>
+
+      {loading && trace && trace.length > 0 && (
+        <Card className="fade-rise p-6">
+          <Label>Working</Label>
+          <Trace segments={trace} totalMs={totalMs} live className="mt-1" />
+        </Card>
+      )}
 
       {result && (
         <Card className="fade-rise overflow-hidden">

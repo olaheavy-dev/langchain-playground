@@ -2,15 +2,15 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, askRagAgent } from "@/lib/api";
+import { ApiError, streamRagAgent } from "@/lib/api";
 import { RagPanel } from "./RagPanel";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
-  askRagAgent: vi.fn(),
+  streamRagAgent: vi.fn(),
 }));
 
-const mockAsk = vi.mocked(askRagAgent);
+const mockAsk = vi.mocked(streamRagAgent);
 
 const SEARCHED = {
   answer: "They like apples, oranges and pears.",
@@ -120,7 +120,7 @@ describe("RagPanel", () => {
   it("aborts an in-flight question when the panel unmounts", async () => {
     let signal: AbortSignal | undefined;
     mockAsk.mockImplementation(
-      (_question, _thread, received) =>
+      (_question, _thread, _onStep, received) =>
         new Promise(() => {
           signal = received;
         }),

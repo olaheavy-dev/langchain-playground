@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { ApiError, askRagAgent } from "@/lib/api";
+import { ApiError, streamRagAgent } from "@/lib/api";
 import type { RagReply, Source } from "@/lib/types";
 import { AnswerScroll } from "./AnswerScroll";
 import { Markdown } from "./Markdown";
-import { Trace } from "./Trace";
+import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
 
 const SUGGESTIONS = [
@@ -31,6 +31,8 @@ export function RagPanel() {
   const [reply, setReply] = useState<RagReply | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [steps, setSteps] = useState<TraceSegment[]>([]);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -43,13 +45,32 @@ export function RagPanel() {
     setLoading(true);
     setError(null);
     setReply(null);
+    setSteps([]);
+    const startedAt = performance.now();
+    const collected: TraceSegment[] = [];
     try {
       // A fresh thread per question. With one shared thread the agent
       // remembers earlier answers and stops searching -- and the panel then
       // reports "nothing retrieved" for an answer that did come from the
       // knowledge base, just on a previous turn. This panel shows one question
       // at a time, so its state should match what it shows.
-      setReply(await askRagAgent(question, crypto.randomUUID(), controller.signal));
+      setReply(
+        await streamRagAgent(
+          question,
+          crypto.randomUUID(),
+          (step) => {
+            collected.push({
+              label: step.label,
+              ms: step.ms,
+              startMs: step.start_ms,
+              hollow: step.label !== "model",
+            });
+            setSteps([...collected]);
+            setElapsedMs(performance.now() - startedAt);
+          },
+          controller.signal,
+        ),
+      );
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(caught instanceof ApiError ? caught.message : "Something went wrong.");
@@ -102,6 +123,13 @@ export function RagPanel() {
           {error && <ErrorNote message={error} />}
         </div>
       </Card>
+
+      {loading && steps.length > 0 && (
+        <Card className="fade-rise p-6">
+          <Label>Working</Label>
+          <Trace segments={steps} totalMs={elapsedMs} live className="mt-1" />
+        </Card>
+      )}
 
       {reply && (
         <Card className="fade-rise p-6">
