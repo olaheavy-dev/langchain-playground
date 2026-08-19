@@ -1,0 +1,108 @@
+{
+  "repeats": 3,
+  "elapsed_seconds": 9.8,
+  "cases": [
+    {
+      "name": "weather: known user gets a real reading",
+      "why": "The whole point of the tool-calling pattern is that the agent fetches this.",
+      "tags": [
+        "weather"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: get_weather called",
+        "pass: get_weather called",
+        "pass: get_weather called"
+      ]
+    },
+    {
+      "name": "weather: reading comes from the tool, not the model",
+      "why": "The agent was once observed answering with a temperature it never fetched. The trace is how that stays visible.",
+      "tags": [
+        "weather",
+        "regression"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: get_weather called",
+        "pass: get_weather called",
+        "pass: get_weather called"
+      ]
+    },
+    {
+      "name": "weather: unknown user gets nulls, not a plausible number",
+      "why": "A fabricated 0.0 reads as a real measurement and is worse than an error.",
+      "tags": [
+        "weather",
+        "honesty"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: no lookup attempted",
+        "pass: no lookup attempted",
+        "pass: no lookup attempted"
+      ]
+    },
+    {
+      "name": "rag: finds the fruit the person likes",
+      "why": "Retrieval has to surface the passages that answer the question.",
+      "tags": [
+        "rag"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: mentioned apple",
+        "pass: mentioned apple",
+        "pass: mentioned apple"
+      ]
+    },
+    {
+      "name": "rag: distinguishes liked from hated",
+      "why": "The knowledge base contains both, phrased almost identically, so this is where naive similarity search goes wrong.",
+      "tags": [
+        "rag",
+        "honesty"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: mentioned banana",
+        "pass: mentioned banana",
+        "pass: mentioned banana"
+      ]
+    },
+    {
+      "name": "rag: searches twice for a two-part question",
+      "why": "Agentic retrieval means the model may search again; this is that case.",
+      "tags": [
+        "rag"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: mentioned thinkpad",
+        "pass: mentioned thinkpad",
+        "pass: mentioned thinkpad"
+      ]
+    },
+    {
+      "name": "rag: declines what the knowledge base cannot answer",
+      "why": "Answering from the model instead is the failure RAG exists to prevent.",
+      "tags": [
+        "rag",
+        "honesty"
+      ],
+      "passes": 3,
+      "attempts": 3,
+      "details": [
+        "pass: declined",
+        "pass: declined",
+        "pass: declined"
+      ]
+    }
+  ]
+}
