@@ -1,6 +1,6 @@
 {
-  "repeats": 3,
-  "elapsed_seconds": 9.8,
+  "repeats": 2,
+  "elapsed_seconds": 9.6,
   "cases": [
     {
       "name": "weather: known user gets a real reading",
@@ -8,10 +8,9 @@
       "tags": [
         "weather"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: get_weather called",
         "pass: get_weather called",
         "pass: get_weather called"
       ]
@@ -23,10 +22,9 @@
         "weather",
         "regression"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: get_weather called",
         "pass: get_weather called",
         "pass: get_weather called"
       ]
@@ -38,55 +36,64 @@
         "weather",
         "honesty"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: no lookup attempted",
         "pass: no lookup attempted",
         "pass: no lookup attempted"
       ]
     },
     {
-      "name": "rag: finds the fruit the person likes",
-      "why": "Retrieval has to surface the passages that answer the question.",
+      "name": "rag: explains a pattern from the docs",
+      "why": "Retrieval has to surface the section that answers the question.",
       "tags": [
         "rag"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: mentioned apple",
-        "pass: mentioned apple",
-        "pass: mentioned apple"
+        "pass: mentioned token",
+        "pass: mentioned token"
       ]
     },
     {
-      "name": "rag: distinguishes liked from hated",
-      "why": "The knowledge base contains both, phrased almost identically, so this is where naive similarity search goes wrong.",
+      "name": "rag: cites the section it drew from",
+      "why": "A passage with no provenance cannot be checked, which defeats the point of showing sources at all.",
+      "tags": [
+        "rag"
+      ],
+      "passes": 2,
+      "attempts": 2,
+      "details": [
+        "pass: cited trace.md \u2014 Why total time is not the sum of the segments trace.md \u2014 Orchestration time trace.md \u2014 What it measures",
+        "pass: cited trace.md \u2014 Why total time is not the sum of the segments trace.md \u2014 Orchestration time trace.md \u2014 What it measures"
+      ]
+    },
+    {
+      "name": "rag: distinguishes neighbouring sections",
+      "why": "The corpus explains both what the trace measures and why its total differs from the sum, in adjacent sections using much the same vocabulary -- which is where similarity search goes wrong.",
       "tags": [
         "rag",
         "honesty"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: mentioned banana",
-        "pass: mentioned banana",
-        "pass: mentioned banana"
+        "pass: mentioned gap",
+        "pass: mentioned gap"
       ]
     },
     {
-      "name": "rag: searches twice for a two-part question",
-      "why": "Agentic retrieval means the model may search again; this is that case.",
+      "name": "rag: answers both halves of a two-part question",
+      "why": "A question spanning two sections must not be half-answered. How many searches that takes is the model's business: this case originally demanded two, and failed against an agent that got both answers with one well-phrased query -- which is better, not worse.",
       "tags": [
         "rag"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: mentioned thinkpad",
-        "pass: mentioned thinkpad",
-        "pass: mentioned thinkpad"
+        "pass: mentioned tool, price",
+        "pass: mentioned tool, price"
       ]
     },
     {
@@ -96,10 +103,9 @@
         "rag",
         "honesty"
       ],
-      "passes": 3,
-      "attempts": 3,
+      "passes": 2,
+      "attempts": 2,
       "details": [
-        "pass: declined",
         "pass: declined",
         "pass: declined"
       ]

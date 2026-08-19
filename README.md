@@ -14,7 +14,7 @@ TypeScript · Tailwind CSS v4 · pytest · Vitest
 | --- | --- | --- | --- |
 | Tool-calling agent | `app/agents/weather.py` | several segments | The model decides when to call your own functions, and fills a typed response |
 | Chat model | `app/agents/python_copilot.py` | one block | One request, one complete answer |
-| Agentic retrieval | `app/agents/rag.py` | searches, then generation | The model decides whether to search a knowledge base, and may search twice |
+| Agentic retrieval | `app/agents/rag.py` | searches, then generation | The model decides whether to search the docs, and cites what it found |
 | Streaming chat model | `app/agents/streaming_copilot.py` | a filling rail | The same answer, sent token by token as it is produced |
 
 The interface is built around that third column. Each pattern is labelled in the sidebar by
@@ -55,18 +55,24 @@ One segment, because there is only one: nothing was visible until everything was
 
 The knowledge base is a **tool**, not a fixed retrieve-then-generate step, so the model
 decides whether a question needs searching at all — and may search more than once before
-answering. Ten short opinions about fruit and computers, embedded with
+answering.
+
+The corpus is **this project's own documentation**, so the demo explains itself: ask how the
+streaming endpoint works and it answers from the file that says so, citing the section. The
+markdown is chunked on headings — a chunk spanning two subjects retrieves well for neither —
+and long sections split again on paragraphs, since an embedding of a thousand words is an
+average of everything in them and matches nothing sharply. Embedded with
 `text-embedding-3-large` into an in-memory vector store.
 
 ![Agentic retrieval](docs/images/06-knowledge-base.jpg)
 
-Every passage that came back is shown with its similarity score, grouped under the search
-that found it, so an answer can be checked against what was actually retrieved. The
-screenshot catches the interesting case: two searches, one for fruit and one for laptops,
-neither of which the caller asked for by name.
+Every passage that came back is shown with its **similarity score and the section it came
+from**, grouped under the search that found it, so a claim can be traced to the document
+that made it rather than taken on trust.
 
-The scores are worth reading. `I love Linux.` comes back at `0.244` for *laptops they like*
-— a weak hit the model correctly ignored. Retrieval is fuzzy, and showing the scores is
+The scores are worth reading. A question about the streaming endpoint pulls
+`patterns.md — Streaming chat model` at `0.447` and `decisions.md — One schema, two jobs` at
+`0.273` — the second a weak, tangential hit. Retrieval is fuzzy, and showing the scores is
 what makes that visible rather than hidden behind a confident answer.
 
 Ask something outside the knowledge base and the model declines, `sources` comes back

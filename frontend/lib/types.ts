@@ -33,6 +33,8 @@ export interface Source {
   score: number;
   /** The search the model chose to run, so two searches stay distinguishable. */
   query: string;
+  /** The document and section it came from. */
+  source: string;
 }
 
 export interface RagRequest {

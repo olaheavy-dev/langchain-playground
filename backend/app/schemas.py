@@ -79,6 +79,7 @@ class Source(BaseModel):
     text: str
     score: float
     query: str = Field(description='The search the model chose to run')
+    source: str = Field(default='', description='The document and section it came from')
 
 
 class RagReply(BaseModel):

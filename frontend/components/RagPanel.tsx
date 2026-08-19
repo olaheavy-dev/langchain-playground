@@ -10,9 +10,9 @@ import { Trace } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
 
 const SUGGESTIONS = [
-  "What fruits does this person like?",
-  "What fruits do they hate, and what laptops do they like?",
-  "Who won the 1998 World Cup?",
+  "How does the streaming endpoint work?",
+  "Why is the total time not the sum of the segments?",
+  "Who wrote this project?",
 ];
 
 /** Passages share a search, so they are shown under the search that found them. */
@@ -75,7 +75,7 @@ export function RagPanel() {
             }
           }}
           rows={3}
-          placeholder="Ask about their opinions on fruit and computers…"
+          placeholder="Ask about this project — its patterns, its API, its decisions…"
           className="mt-3"
         />
 
@@ -135,15 +135,25 @@ export function RagPanel() {
                       {group.hits.map((hit, index) => (
                         <li
                           key={`${hit.text}-${index}`}
-                          className="flex items-baseline justify-between gap-4 border-l-2 border-border-strong pl-3 text-base text-text"
+                          className="border-l-2 border-border-strong pl-3"
                         >
-                          <span>{hit.text}</span>
-                          <span
-                            className="shrink-0 font-mono text-xs tabular-nums text-text-faint"
-                            title="Similarity to the search"
-                          >
-                            {hit.score.toFixed(3)}
-                          </span>
+                          <div className="flex items-baseline justify-between gap-4">
+                            {/* The section, not just the sentence: a claim
+                                should be traceable to the document that made
+                                it. */}
+                            <span className="font-mono text-xs text-text-faint">
+                              {hit.source || "unattributed"}
+                            </span>
+                            <span
+                              className="shrink-0 font-mono text-xs tabular-nums text-text-faint"
+                              title="Similarity to the search"
+                            >
+                              {hit.score.toFixed(3)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-base text-text">
+                            {hit.text}
+                          </p>
                         </li>
                       ))}
                     </ul>
