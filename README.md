@@ -10,11 +10,16 @@ TypeScript · Tailwind CSS v4 · pytest · Vitest
 
 ![Home](docs/images/01-home.jpg)
 
-| Pattern | Module | What it demonstrates |
-| --- | --- | --- |
-| Tool-calling agent | `app/agents/weather.py` | The model decides when to call your own functions, and fills a typed response |
-| Chat model | `app/agents/python_copilot.py` | One request, one complete answer |
-| Streaming chat model | `app/agents/streaming_copilot.py` | The same answer, sent token by token as it is produced |
+| Pattern | Module | Arrival | What it demonstrates |
+| --- | --- | --- | --- |
+| Tool-calling agent | `app/agents/weather.py` | several segments | The model decides when to call your own functions, and fills a typed response |
+| Chat model | `app/agents/python_copilot.py` | one block | One request, one complete answer |
+| Streaming chat model | `app/agents/streaming_copilot.py` | a filling rail | The same answer, sent token by token as it is produced |
+
+The interface is built around that third column. Each pattern is labelled in the sidebar by
+a miniature of its own **arrival trace**, and the full trace is drawn under every answer
+from timings measured on the server. Same rail, three shapes — which is the difference the
+whole project is about.
 
 ---
 
@@ -31,6 +36,11 @@ response schema and the agent's `response_format`.
 
 ![Tool-calling agent](docs/images/02-weather-agent.jpg)
 
+The trace under the reading is the whole pattern in one line: `network 8ms`,
+`locate_user 0ms`, `get_weather 166ms`, `model 4.9s`. Two tool calls that cost almost
+nothing, and a model that costs everything — which is not the shape most people expect
+before they measure it.
+
 ### 2. Chat model
 
 No tools, no agent loop. A seeded system/human/AI exchange steers tone and depth, then one
@@ -38,12 +48,22 @@ No tools, no agent loop. A seeded system/human/AI exchange steers tone and depth
 
 ![Chat model](docs/images/03-chat-model.jpg)
 
+One segment, because there is only one: nothing was visible until everything was.
+
 ### 3. Streaming chat model
 
 The same model driven by `astream`. Tokens are pushed to the browser over server-sent
 events and rendered as they arrive; the request can be cancelled mid-flight.
 
 ![Streaming chat model](docs/images/04-streaming.jpg)
+
+Caught mid-flight above — `STOP` is live, and gold is reserved throughout for work still in
+flight. The answer scrolls inside its own panel rather than growing the page, and follows
+the stream until you scroll away from the bottom.
+
+Once it finishes, the trace splits into time-to-first-token and the long tail you spend
+reading while the model is still writing — typically `464ms` then `3.1s`. That gap is why
+streaming feels faster than a chat model which finishes sooner.
 
 ### Handling the failure case honestly
 
@@ -53,6 +73,11 @@ plausible `0.0`, the schema makes every reading nullable, so a failed lookup ret
 TypeScript types, forcing the frontend to handle it too.
 
 ![Unknown user](docs/images/05-unknown-user.jpg)
+
+The trace corroborates it. There is no `get_weather` segment, because with no city there
+was nothing to look up — the agent did not quietly fetch the weather somewhere else and
+report that instead. Measuring each step is what makes a claim like that checkable rather
+than a promise.
 
 ---
 
@@ -215,18 +240,22 @@ backend/
 frontend/
 ├── app/
 │   ├── layout.tsx           # fonts, theme applied before first paint
-│   ├── page.tsx             # sidebar shell, one panel per agent
-│   └── globals.css          # design tokens for both themes
-├── components/              # panels, primitives, markdown renderer
+│   ├── page.tsx             # sidebar shell, one panel per pattern
+│   └── globals.css          # design tokens, type and radius scales
+├── components/
+│   ├── Trace.tsx            # the arrival trace, and its miniature in the rail
+│   ├── AnswerScroll.tsx     # capped, self-scrolling box for model output
+│   └── …                    # panels, primitives, markdown renderer
 ├── lib/
 │   ├── api.ts               # typed client, including the SSE reader
 │   └── types.ts             # mirrors the backend schemas
 └── vitest.config.mts        # tests live beside what they test, as *.test.tsx
 ```
 
-`WeatherResponse` in `schemas.py` is both the HTTP response model and the agent's
-`response_format`, so the API contract and the structure the model must fill in are
-defined once.
+`WeatherResponse` in `schemas.py` is both the agent's `response_format` and the base of
+`WeatherReply`, the model the endpoint returns, so the API contract and the structure the
+model must fill in are defined once. The trace lives on `WeatherReply` alone — it is the
+server's account of its own work, and nothing the model should be asked to supply.
 
 ## Technical decisions
 
