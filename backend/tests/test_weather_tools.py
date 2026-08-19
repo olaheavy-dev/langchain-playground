@@ -12,7 +12,22 @@ import pytest
 
 from app.agents.weather import get_weather, locate_user
 
-CONDITIONS = {'current_condition': [{'temp_C': '17', 'temp_F': '63', 'humidity': '84'}]}
+# Trimmed to the shape the tool reads. The real j1 response also carries three
+# days of hourly forecast, which the tool deliberately drops.
+CONDITIONS = {
+    'current_condition': [
+        {
+            'temp_C': '17',
+            'temp_F': '63',
+            'humidity': '84',
+            'FeelsLikeC': '16',
+            'weatherDesc': [{'value': 'Light rain shower'}],
+            'windspeedKmph': '11',
+            'cloudcover': '75',
+        }
+    ],
+    'weather': [{'hourly': ['...three days of forecast...']}],
+}
 
 
 @pytest.mark.parametrize(
@@ -33,13 +48,28 @@ def test_unrecognised_ids_resolve_to_unknown(runtime_for, user_id: str) -> None:
     assert locate_user.func(runtime_for(user_id)) == 'Unknown'
 
 
-async def test_get_weather_returns_the_upstream_payload(mock_wttr) -> None:
+async def test_get_weather_returns_only_the_current_conditions(mock_wttr) -> None:
+    """The full j1 response is ~6,500 tokens of three-day forecast, all of which
+    would go to the model as a tool message and then be carried in the thread
+    for every later turn. The tool keeps today's numbers and drops the rest."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=CONDITIONS)
 
     mock_wttr(handler)
 
-    assert await get_weather.ainvoke({'city': 'Vienna'}) == CONDITIONS
+    reading = await get_weather.ainvoke({'city': 'Vienna'})
+
+    assert reading == {
+        'temp_C': '17',
+        'temp_F': '63',
+        'humidity': '84',
+        'feels_like_C': '16',
+        'description': 'Light rain shower',
+        'wind_kmph': '11',
+        'cloud_cover': '75',
+    }
+    assert 'weather' not in reading
 
 
 async def test_get_weather_asks_for_json(mock_wttr) -> None:

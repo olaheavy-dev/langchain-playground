@@ -385,6 +385,16 @@ the agent sometimes answered without calling `get_weather` at all — reporting 
 from the model's own head. The system prompt now forbids that, and the trace is where it
 would show up again.
 
+### Give the model what it needs, not what the API returned
+
+`get_weather` returns current conditions rather than the upstream response. wttr.in's `j1`
+format is around 26,000 characters — roughly 6,500 tokens of three-day hourly forecast —
+and every one of them would go to the model as a tool message and then sit in the thread
+for every later turn. The agent needs today's numbers, which is about 30 tokens' worth.
+
+The cost of a tool result is easy to miss because nothing in the code looks expensive: it
+is one `response.json()`.
+
 ### Timing as middleware
 
 Each agent carries a `TracingMiddleware` that wraps model calls and tool calls, rather than
@@ -430,6 +440,13 @@ Deliberate scope boundaries rather than oversights:
 - **`InMemorySaver` for conversation state.** Process-local: history is lost on restart and
   is not shared across workers. Production would use a database-backed checkpointer; the
   interface is identical, so it is a one-line swap.
+- **Weather threads grow without bound.** A user's thread is reused across requests, so its
+  history only ever gets longer. It grows slowly now — the tool returns current conditions
+  rather than the full wttr.in response, which is ~26,000 characters of three-day forecast
+  and was being sent to the model and then carried in the thread for every later turn. If
+  this panel ever became a real conversation, that is where `SummarizationMiddleware` or
+  message trimming would earn its place; today nothing in the interface depends on the
+  agent remembering, so neither is pulling its weight.
 - **No authentication.** `user_id` arrives in the request body. Real deployment would take
   it from a verified session, not from the client.
 - **No end-to-end test.** The suite covers each side of the boundary but never runs the

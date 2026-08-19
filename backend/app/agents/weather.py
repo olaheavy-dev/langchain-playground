@@ -37,7 +37,23 @@ async def get_weather(city: str) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(f'https://wttr.in/{city}?format=j1')
         response.raise_for_status()
-        return response.json()
+        payload = response.json()
+
+    # Only the current conditions. The full j1 response is around 26,000
+    # characters -- roughly 6,500 tokens of three-day hourly forecast -- and all
+    # of it would be sent to the model as a tool message, then carried in the
+    # thread for every later turn. The agent needs today's numbers, so that is
+    # what it gets.
+    current = payload['current_condition'][0]
+    return {
+        'temp_C': current['temp_C'],
+        'temp_F': current['temp_F'],
+        'humidity': current['humidity'],
+        'feels_like_C': current['FeelsLikeC'],
+        'description': current['weatherDesc'][0]['value'],
+        'wind_kmph': current['windspeedKmph'],
+        'cloud_cover': current['cloudcover'],
+    }
 
 
 @tool('locate_user', description="Look up a user's city based on their context")
