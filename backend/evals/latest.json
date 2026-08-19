@@ -1,6 +1,6 @@
 {
   "repeats": 2,
-  "elapsed_seconds": 14.8,
+  "elapsed_seconds": 13.7,
   "cases": [
     {
       "name": "weather: known user gets a real reading",
@@ -94,6 +94,19 @@
       "details": [
         "pass: mentioned tool, price",
         "pass: mentioned tool, price"
+      ]
+    },
+    {
+      "name": "rag: defines a term from the glossary",
+      "why": "The glossary and the design notes discuss the same machinery in the same words, so a question about a term has to find the entry that defines it rather than the decision that mentions it in passing.",
+      "tags": [
+        "rag"
+      ],
+      "passes": 2,
+      "attempts": 2,
+      "details": [
+        "pass: mentioned thread",
+        "pass: mentioned thread"
       ]
     },
     {

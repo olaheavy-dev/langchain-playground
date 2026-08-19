@@ -63,7 +63,10 @@ decides whether a question needs searching at all — and may search more than o
 answering.
 
 The corpus is **this project's own documentation**, so the demo explains itself: ask how the
-streaming endpoint works and it answers from the file that says so, citing the section. The
+streaming endpoint works and it answers from the file that says so, citing the section. It
+includes a [glossary of the LangChain terms this project uses](backend/app/knowledge/glossary.md)
+— agent, tool call, checkpointer, `response_format`, middleware — each tied to where it
+appears here rather than defined in the abstract. The
 markdown is chunked on headings — a chunk spanning two subjects retrieves well for neither —
 and long sections split again on paragraphs, since an embedding of a thousand words is an
 average of everything in them and matches nothing sharply. Embedded with
@@ -408,6 +411,24 @@ run.
 
 The harness itself is unit-tested with fake cases, because a harness that has never been
 seen to report a failure is not evidence of anything.
+
+## What the LangChain terms mean
+
+[`backend/app/knowledge/glossary.md`](backend/app/knowledge/glossary.md) defines the
+vocabulary — agent, tool, tool call and tool message, `ToolRuntime`, `response_format`,
+checkpointer, `thread_id`, middleware, embeddings, vector store, `usage_metadata` — and says
+how each one is used in this repository rather than what it means in general.
+
+It lives in the knowledge base rather than in `docs/`, so it is one file doing two jobs: the
+reference a reader wants, and text the retrieval agent can answer from. Ask it *what is a
+checkpointer?* and it cites the entry.
+
+That also made the retrieval demo more honest. With ten short sections almost any question
+found its answer; at thirty, entries share vocabulary and compete — "tool", "model" and
+"stream" appear across half of them — which is when scores and citations start earning their
+place. It improved an existing answer too: *how does the streaming endpoint work?* used to
+pull a tangential passage about schemas as its second hit, and now pulls the glossary entry
+for streaming instead.
 
 ## Layout
 
