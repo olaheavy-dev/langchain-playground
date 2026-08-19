@@ -52,7 +52,7 @@ plausible `0.0`, the schema makes every reading nullable, so a failed lookup ret
 `null` and the interface has to show it. That constraint propagates through the generated
 TypeScript types, forcing the frontend to handle it too.
 
-![Unknown user, light theme](docs/images/05-unknown-user-light.jpg)
+![Unknown user](docs/images/05-unknown-user.jpg)
 
 ---
 
