@@ -64,78 +64,82 @@ export default function Home() {
   const active = AGENTS.find((agent) => agent.id === activeId) ?? AGENTS[0];
 
   return (
-    <div className="min-h-full">
-      <header className="border-b border-border-subtle bg-surface">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-x-8 gap-y-4 px-6 pt-8 pb-6 lg:px-10">
-          <div>
-            <h1 className="font-display text-2xl leading-none font-semibold tracking-[-0.02em] text-text">
-              LangChain Playground
-            </h1>
-            <p className="mt-3 max-w-md text-base text-text-muted">
-              Three ways to put a language model behind an API, and the thing
-              that actually separates them: when the answer shows up.
-            </p>
-          </div>
-          <div className="flex items-center gap-5">
-            <HealthIndicator />
-            <ThemeToggle />
-          </div>
+    // From lg the sidebar is pinned and the main column scrolls. Long answers
+    // scroll inside their own panel (see AnswerScroll), so in practice the page
+    // barely moves.
+    <div className="flex min-h-full flex-col lg:h-screen lg:flex-row">
+      <aside className="flex shrink-0 flex-col gap-9 border-b border-border-subtle bg-surface px-6 py-7 lg:h-screen lg:w-[288px] lg:border-r lg:border-b-0 lg:px-7">
+        <div>
+          <h1 className="font-display text-lg leading-tight font-semibold tracking-[-0.015em] text-text">
+            LangChain Playground
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-muted">
+            Three ways to put a language model behind an API, and the thing that
+            separates them: when the answer shows up.
+          </p>
         </div>
-      </header>
 
-      <nav
-        aria-label="Patterns"
-        className="border-b border-border-subtle bg-surface"
-      >
-        <ul className="mx-auto flex max-w-5xl flex-col sm:flex-row px-6 lg:px-10">
-          {AGENTS.map((agent) => {
-            const selected = agent.id === activeId;
-            return (
-              <li key={agent.id} className="flex-1">
-                <button
-                  onClick={() => setActiveId(agent.id)}
-                  aria-current={selected ? "page" : undefined}
-                  className={cx(
-                    "group w-full border-b-2 py-4 text-left transition-colors duration-150 sm:pr-6",
-                    selected
-                      ? "border-accent"
-                      : "border-transparent hover:border-border-strong",
-                  )}
-                >
-                  <ArrivalGlyph shape={agent.shape} active={selected} />
-                  <span
+        <nav aria-label="Patterns">
+          <ul className="flex flex-col">
+            {AGENTS.map((agent) => {
+              const selected = agent.id === activeId;
+              return (
+                <li key={agent.id}>
+                  <button
+                    onClick={() => setActiveId(agent.id)}
+                    aria-current={selected ? "page" : undefined}
                     className={cx(
-                      "mt-2.5 block font-display text-lg font-semibold tracking-[-0.01em]",
-                      selected ? "text-text" : "text-text-muted",
+                      "w-full border-l-2 py-3 pl-4 text-left transition-colors duration-150",
+                      selected
+                        ? "border-accent"
+                        : "border-border-subtle hover:border-border-strong",
                     )}
                   >
-                    {agent.name}
-                  </span>
-                  <span className="mt-0.5 block font-mono text-xs uppercase tracking-[0.14em] text-text-faint">
-                    {agent.tagline}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+                    <ArrivalGlyph shape={agent.shape} active={selected} />
+                    <span
+                      className={cx(
+                        "mt-2 block font-display text-base font-semibold tracking-[-0.01em]",
+                        selected ? "text-text" : "text-text-muted",
+                      )}
+                    >
+                      {agent.name}
+                    </span>
+                    <span className="mt-0.5 block font-mono text-xs uppercase tracking-[0.14em] text-text-faint">
+                      {agent.tagline}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-      <main className="mx-auto max-w-5xl px-6 py-12 lg:px-10">
-        <div key={active.id} className="fade-rise">
-          <div className="max-w-2xl">
+        {/* Extra bottom padding on large screens keeps this clear of the
+            Next.js dev-tools badge pinned to the corner. */}
+        <div className="mt-auto flex flex-col gap-3 lg:pb-9">
+          <HealthIndicator />
+          <ThemeToggle />
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">
+        <div
+          key={active.id}
+          className="fade-rise mx-auto w-full max-w-3xl px-6 py-10 lg:px-12 lg:py-12"
+        >
+          <header>
             <h2 className="font-display text-xl font-semibold tracking-[-0.015em] text-text">
               {active.title}
             </h2>
             <p className="mt-3 text-base leading-relaxed text-text-muted">
               {active.description}
             </p>
-            <p className="mt-5 font-mono text-xs tracking-wide text-text-faint">
+            <p className="mt-4 font-mono text-xs tracking-wide text-text-faint">
               {active.endpoint}
             </p>
-          </div>
+          </header>
 
-          <div className="mt-10">{active.panel()}</div>
+          <div className="mt-8">{active.panel()}</div>
         </div>
       </main>
     </div>

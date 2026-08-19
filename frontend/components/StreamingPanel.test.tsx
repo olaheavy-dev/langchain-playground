@@ -67,6 +67,24 @@ describe("StreamingPanel", () => {
     );
   });
 
+  it("follows the stream only while the reader is at the bottom", async () => {
+    const { stream, release } = heldStream();
+    mockStream.mockReturnValue(stream);
+    render(<StreamingPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+    const region = await screen.findByRole("region", { name: /answer/i });
+    await screen.findByText("First.");
+
+    // jsdom reports every box as zero-height, so the container always reads as
+    // "at the bottom" and the follow runs -- which is what this asserts. The
+    // scrolled-up case is the branch above it and cannot be exercised without
+    // real layout.
+    expect(region.scrollTop).toBe(region.scrollHeight);
+
+    release();
+  });
+
   it("aborts the request when Stop is pressed", async () => {
     const { stream, release } = heldStream();
     mockStream.mockReturnValue(stream);

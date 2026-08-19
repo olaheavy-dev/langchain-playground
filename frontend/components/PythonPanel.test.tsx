@@ -58,6 +58,18 @@ describe("PythonPanel", () => {
     expect(screen.queryByText(/\*\*decorator\*\*/)).not.toBeInTheDocument();
   });
 
+  it("puts the answer in a scrollable region a keyboard can reach", async () => {
+    mockAsk.mockResolvedValue({ answer: "Released in 1991." });
+    render(<PythonPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+    const region = await screen.findByRole("region", { name: /answer/i });
+    expect(region).toHaveClass("overflow-y-auto");
+    // Without this the overflow is visible but unreachable without a mouse.
+    expect(region).toHaveAttribute("tabindex", "0");
+  });
+
   it("submits on Cmd+Enter", async () => {
     mockAsk.mockResolvedValue({ answer: "ok" });
     render(<PythonPanel />);

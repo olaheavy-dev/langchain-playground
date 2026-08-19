@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError, streamProgrammingCopilot } from "@/lib/api";
+import { AnswerScroll } from "./AnswerScroll";
 import { Markdown } from "./Markdown";
 import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
@@ -127,12 +128,14 @@ export function StreamingPanel() {
               </span>
             )}
           </div>
-          <div aria-live="polite" className="mt-2.5">
-            <Markdown>{answer}</Markdown>
-            {streaming && (
-              <span className="caret-blink -mt-1 inline-block h-[1.1em] w-[2px] translate-y-[0.15em] bg-signal" />
-            )}
-          </div>
+          <AnswerScroll revision={answer} follow={streaming} className="mt-2.5">
+            <div aria-live="polite">
+              <Markdown>{answer}</Markdown>
+              {streaming && (
+                <span className="caret-blink -mt-1 inline-block h-[1.1em] w-[2px] translate-y-[0.15em] bg-signal" />
+              )}
+            </div>
+          </AnswerScroll>
           {!streaming && answer && (
             <p className="mt-5 border-t border-border-subtle pt-4 text-xs text-text-faint">
               Arrived token by token over server-sent events.

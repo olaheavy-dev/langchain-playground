@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError, askPythonCopilot } from "@/lib/api";
+import { AnswerScroll } from "./AnswerScroll";
 import { Markdown } from "./Markdown";
 import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
@@ -96,9 +97,9 @@ export function PythonPanel() {
       {answer && (
         <Card className="fade-rise p-6">
           <Label>Answer</Label>
-          <div className="mt-2.5">
+          <AnswerScroll revision={answer} className="mt-2.5">
             <Markdown>{answer}</Markdown>
-          </div>
+          </AnswerScroll>
           <p className="mt-5 border-t border-border-subtle pt-4 text-xs text-text-faint">
             Delivered in one piece — the model finished before anything was sent.
           </p>
