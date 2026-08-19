@@ -3,8 +3,10 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every pull request, not only those aimed at main. Stacked branches target
+  # each other, and with a branch filter here the whole middle of a stack merges
+  # having never been checked.
   pull_request:
-    branches: [main]
 
 # A new push to the same branch makes the previous run redundant.
 concurrency:
