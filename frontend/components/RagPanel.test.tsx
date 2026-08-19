@@ -18,7 +18,7 @@ const SEARCHED = {
     { text: "I love apples.", score: 0.376, query: "fruits liked" },
     { text: "I enjoy oranges.", score: 0.409, query: "fruits liked" },
   ],
-  trace: { total_ms: 2731.0, segments: [
+  trace: { total_ms: 2731.0, input_tokens: 900, output_tokens: 85, cached_input_tokens: 0, model_calls: 3, cost_usd: 0.0005, segments: [
     { label: "kb_search", ms: 661, start_ms: 0 },
     { label: "model", ms: 2731, start_ms: 0 },
   ] },
@@ -30,7 +30,7 @@ const TWO_SEARCHES = {
     { text: "I despise mangos.", score: 0.42, query: "fruits they hate" },
     { text: "I like Lenovo Thinkpads.", score: 0.51, query: "laptops they like" },
   ],
-  trace: { total_ms: 2793.0, segments: [
+  trace: { total_ms: 2793.0, input_tokens: 900, output_tokens: 85, cached_input_tokens: 0, model_calls: 3, cost_usd: 0.0005, segments: [
     { label: "kb_search", ms: 182, start_ms: 0 },
     { label: "kb_search", ms: 216, start_ms: 0 },
     { label: "model", ms: 2793, start_ms: 0 },
@@ -40,7 +40,7 @@ const TWO_SEARCHES = {
 const UNSEARCHED = {
   answer: "That is not in the knowledge base.",
   sources: [],
-  trace: { total_ms: 1509.0, segments: [{ label: "model", ms: 1509, start_ms: 0 }] },
+  trace: { total_ms: 1509.0, input_tokens: 900, output_tokens: 85, cached_input_tokens: 0, model_calls: 3, cost_usd: 0.0005, segments: [{ label: "model", ms: 1509, start_ms: 0 }] },
 };
 
 beforeEach(() => {
@@ -153,7 +153,7 @@ describe("Trace lanes", () => {
     mockAsk.mockResolvedValue({
       answer: "Both.",
       sources: [],
-      trace: { total_ms: 1020.0, segments: [
+      trace: { total_ms: 1020.0, input_tokens: 900, output_tokens: 85, cached_input_tokens: 0, model_calls: 3, cost_usd: 0.0005, segments: [
         { label: "kb_search", ms: 500, start_ms: 100 },
         { label: "kb_search", ms: 500, start_ms: 110 },
         { label: "model", ms: 400, start_ms: 620 },
@@ -169,5 +169,55 @@ describe("Trace lanes", () => {
     const rows = rail.querySelectorAll(":scope > div");
     expect(rows).toHaveLength(2);
     expect(screen.getByText("1.0s")).toBeInTheDocument();
+  });
+});
+
+describe("Trace usage", () => {
+  it("reports what the request cost", async () => {
+    // The first question anyone asks about an LLM feature, answered in the
+    // interface rather than on the invoice a month later.
+    mockAsk.mockResolvedValue({
+      answer: "Apples.",
+      sources: [],
+      trace: {
+        total_ms: 2000,
+        input_tokens: 1200,
+        output_tokens: 90,
+        cached_input_tokens: 0,
+        model_calls: 2,
+        cost_usd: 0.00062,
+        segments: [{ label: "model", ms: 2000, start_ms: 0 }],
+      },
+    });
+    render(<RagPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+    expect(await screen.findByText(/2 model calls/)).toBeInTheDocument();
+    expect(screen.getByText(/1,200 in/)).toBeInTheDocument();
+    expect(screen.getByText(/\$0\.0006/)).toBeInTheDocument();
+  });
+
+  it("says the cost is unknown rather than showing zero", async () => {
+    // A model with no price on file costs something; reporting $0.00 would be
+    // a worse answer than admitting the number is not available.
+    mockAsk.mockResolvedValue({
+      answer: "Apples.",
+      sources: [],
+      trace: {
+        total_ms: 2000,
+        input_tokens: 1200,
+        output_tokens: 90,
+        cached_input_tokens: 0,
+        model_calls: 1,
+        cost_usd: null,
+        segments: [{ label: "model", ms: 2000, start_ms: 0 }],
+      },
+    });
+    render(<RagPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+    expect(await screen.findByText(/cost unknown/)).toBeInTheDocument();
   });
 });

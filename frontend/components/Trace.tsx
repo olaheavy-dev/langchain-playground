@@ -52,13 +52,28 @@ function toRows(segments: TraceSegment[]): TraceSegment[][] {
  * that fills while tokens land. Same axis, different shapes -- which is the
  * difference the whole project is about.
  */
+/** Sub-cent costs need more than two decimals to say anything at all. */
+function formatCost(usd: number): string {
+  if (usd >= 0.01) return `$${usd.toFixed(2)}`;
+  if (usd >= 0.0001) return `$${usd.toFixed(4)}`;
+  return "<$0.0001";
+}
+
 export function Trace({
   segments,
   totalMs,
+  usage,
   live = false,
   className,
 }: {
   segments: TraceSegment[];
+  /** What the request consumed, when the server reported it. */
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    modelCalls: number;
+    costUsd: number | null;
+  };
   /**
    * Wall time for the whole request. Given rather than summed: work overlaps,
    * and the gaps between segments are real time nobody measured directly.
@@ -117,6 +132,26 @@ export function Trace({
           </div>
         ))}
       </div>
+
+      {usage && usage.modelCalls > 0 && (
+        <p className="mt-2 font-mono text-xs text-text-faint">
+          {usage.modelCalls} model {usage.modelCalls === 1 ? "call" : "calls"}
+          {" · "}
+          <span className="tabular-nums">
+            {usage.inputTokens.toLocaleString()} in
+          </span>
+          {" / "}
+          <span className="tabular-nums">
+            {usage.outputTokens.toLocaleString()} out
+          </span>
+          {" · "}
+          {/* Unknown rather than free: a model with no price on file would
+              otherwise be reported as costing nothing. */}
+          <span className="tabular-nums">
+            {usage.costUsd === null ? "cost unknown" : formatCost(usage.costUsd)}
+          </span>
+        </p>
+      )}
 
       <ol className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1">
         {segments.map((segment, index) => (

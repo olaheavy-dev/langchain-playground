@@ -208,6 +208,12 @@ so each segment is timed where it happens and none is inferred by subtraction �
 also why the agent shows *three* model calls rather than one: that is the loop it actually
 ran.
 
+Alongside the timings, the trace reports what the request consumed — model calls, input
+and output tokens, and an estimated cost — because "how long did it take" and "what did it
+cost" are the same question asked twice. The interface shows it under the rail:
+`3 model calls · 909 in / 100 out · $0.0005`. An unpriced model reports the cost as
+unknown rather than as zero, since those are different claims.
+
 `total_ms` is wall time and is deliberately not the sum of the segments. Tool calls issued
 in the same turn run concurrently, so segments can overlap; and the gaps between them are
 the agent's own orchestration. The interface draws the segments against the total, so both

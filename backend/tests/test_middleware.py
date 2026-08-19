@@ -145,3 +145,91 @@ async def test_concurrent_work_is_counted_once() -> None:
     # searches side by side took 50ms, and naive subtraction made the leftover
     # negative.
     assert trace.total_ms < sum(segment.ms for segment in segments)
+
+
+class FakeMessage:
+    def __init__(self, usage: dict | None, model_name: str = 'gpt-4.1-mini-2025-04-14') -> None:
+        self.usage_metadata = usage
+        self.response_metadata = {'model_name': model_name}
+
+
+class FakeResponse:
+    def __init__(self, *messages) -> None:
+        self.result = list(messages)
+
+
+async def test_token_usage_is_collected_from_the_model_response() -> None:
+    started = start_collecting()
+
+    async def handler(request):
+        return FakeResponse(
+            FakeMessage(
+                {
+                    'input_tokens': 1200,
+                    'output_tokens': 300,
+                    'input_token_details': {'cache_read': 200},
+                }
+            )
+        )
+
+    await TracingMiddleware().awrap_model_call(object(), handler)
+    trace = finish(started)
+
+    assert trace.input_tokens == 1200
+    assert trace.output_tokens == 300
+    assert trace.cached_input_tokens == 200
+    assert trace.model_calls == 1
+
+
+async def test_usage_adds_up_across_the_loop() -> None:
+    """An agent turn is several model calls, and the cost of the request is all
+    of them -- reporting only the last would understate it every time a tool was
+    used."""
+    started = start_collecting()
+
+    async def handler(request):
+        return FakeResponse(FakeMessage({'input_tokens': 500, 'output_tokens': 100}))
+
+    middleware = TracingMiddleware()
+    await middleware.awrap_model_call(object(), handler)
+    await middleware.awrap_model_call(object(), handler)
+    trace = finish(started)
+
+    assert trace.model_calls == 2
+    assert trace.input_tokens == 1000
+    # 1000 input at $0.40/M plus 200 output at $1.60/M.
+    assert trace.cost_usd == pytest.approx(0.00072)
+
+
+async def test_a_message_without_usage_is_skipped_rather_than_counted() -> None:
+    """Absent is not zero: counting a message that reported nothing would claim
+    a call was free."""
+    started = start_collecting()
+
+    async def handler(request):
+        return FakeResponse(FakeMessage(None))
+
+    await TracingMiddleware().awrap_model_call(object(), handler)
+    trace = finish(started)
+
+    assert trace.model_calls == 0
+    assert trace.cost_usd is None
+
+
+async def test_one_unpriced_model_makes_the_whole_cost_unknown() -> None:
+    """A partial sum presented as the cost understates it, which is worse than
+    admitting the number is not available."""
+    started = start_collecting()
+
+    async def handler(request):
+        return FakeResponse(
+            FakeMessage({'input_tokens': 10, 'output_tokens': 10}),
+            FakeMessage({'input_tokens': 10, 'output_tokens': 10}, model_name='mystery-model'),
+        )
+
+    await TracingMiddleware().awrap_model_call(object(), handler)
+    trace = finish(started)
+
+    assert trace.model_calls == 2
+    assert trace.input_tokens == 20
+    assert trace.cost_usd is None

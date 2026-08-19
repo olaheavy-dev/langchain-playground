@@ -49,6 +49,13 @@ export interface RagRequest {
 export interface Trace {
   total_ms: number;
   segments: TraceSegment[];
+  input_tokens: number;
+  output_tokens: number;
+  /** Input the provider served from its own cache; part of input_tokens. */
+  cached_input_tokens: number;
+  model_calls: number;
+  /** null when a model in the turn has no price on file — not the same as free. */
+  cost_usd: number | null;
 }
 
 export interface RagReply {
