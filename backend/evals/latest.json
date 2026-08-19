@@ -1,6 +1,6 @@
 {
   "repeats": 2,
-  "elapsed_seconds": 9.6,
+  "elapsed_seconds": 14.8,
   "cases": [
     {
       "name": "weather: known user gets a real reading",

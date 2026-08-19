@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ['http://localhost:3000']
     # Every /api route costs money, so an unauthenticated deployment needs a cap.
     rate_limit_per_minute: int = 20
+    # Embed the knowledge base at startup rather than during the first search.
+    # Worth turning off for a reload-driven dev loop, where it is paid on every
+    # restart for a corpus that has not changed.
+    warm_knowledge_base: bool = True
+    log_level: str = 'INFO'
 
 
 @lru_cache

@@ -31,3 +31,10 @@ workers each get their own allowance.
 Conversation state uses an in-memory checkpointer, so history is lost on restart and is not
 shared between workers. A database-backed checkpointer has the same interface and would be a
 one-line change.
+
+## Warming the knowledge base
+The vector store is embedded at startup rather than during the first search. Built lazily it
+cost 2.7 seconds on the first search against 200 milliseconds on every one after it. Moving
+the work to startup does not make it cheaper, but a platform holds traffic until startup
+finishes, so a machine waking pays it instead of a visitor. Failing to warm is logged rather
+than fatal, because three of the four endpoints never touch the vector store.
