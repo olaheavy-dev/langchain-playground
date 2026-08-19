@@ -61,7 +61,9 @@ jobs:
         run: npm run lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        # next typegen first: LayoutProps and friends are generated types, and
+        # nothing has run a build yet at this point.
+        run: npm run typecheck
 
       - name: Run tests
         run: npm test
