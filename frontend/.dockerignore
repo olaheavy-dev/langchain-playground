@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+
+# Tests and their setup are not part of the shipped app. The ** matters:
+# .dockerignore patterns without it match only the context root, so nested
+# component tests would still be copied in -- and then fail the build's type
+# check, because the matcher types they rely on live in vitest.setup.ts.
+**/*.test.ts
+**/*.test.tsx
+vitest.config.mts
+vitest.setup.ts

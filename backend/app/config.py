@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     model_name: str = 'gpt-4.1-mini'
     embedding_model_name: str = 'text-embedding-3-large'
     cors_origins: list[str] = ['http://localhost:3000']
+    # Every /api route costs money, so an unauthenticated deployment needs a cap.
+    rate_limit_per_minute: int = 20
 
 
 @lru_cache

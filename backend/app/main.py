@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.rate_limit import RateLimitMiddleware
 from app.routers import copilot, rag, weather
 
 settings = get_settings()
@@ -10,6 +11,12 @@ app = FastAPI(
     title='LangChain Playground API',
     description='Three LangChain patterns: a tool-calling agent, a chat model, and a streaming chat model.',
     version='0.1.0',
+)
+
+app.add_middleware(
+    RateLimitMiddleware,
+    limit=settings.rate_limit_per_minute,
+    window_seconds=60.0,
 )
 
 app.add_middleware(

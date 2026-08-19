@@ -106,6 +106,18 @@ than a promise.
 
 ## Getting started
 
+### With Docker
+
+```bash
+cp backend/.env.example backend/.env    # then add your OpenAI key
+docker compose up --build
+```
+
+The interface is then on <http://localhost:3000> and the API on
+<http://localhost:8000>.
+
+### Without Docker
+
 Requires Python 3.13+, [uv](https://docs.astral.sh/uv/), and Node 20+.
 
 **Backend** — in one terminal:
@@ -131,6 +143,28 @@ npm run dev
 
 The interface is then on <http://localhost:3000>. It needs the backend running;
 the sidebar shows a live indicator either way.
+
+## Deploying it
+
+The backend ships a Dockerfile and a `fly.toml`; the frontend builds to a
+standalone bundle that Vercel or any Node host will serve.
+
+```bash
+cd backend
+fly launch --no-deploy
+fly secrets set OPENAI_API_KEY=sk-... CORS_ORIGINS='["https://your-frontend.vercel.app"]'
+fly deploy
+```
+
+Then point the frontend at it with `NEXT_PUBLIC_API_URL`. That value is inlined
+into the client bundle at build time, so it is a build argument rather than a
+runtime variable — changing it means rebuilding.
+
+**Before putting it on the internet:** every `/api` route calls a paid model and
+none of them asks who is calling. Set a spend cap on the key. The built-in rate
+limiter (20 requests per minute per client, `RATE_LIMIT_PER_MINUTE`) caps a
+caller's rate but not your monthly bill, and it counts in-process — with several
+workers each gets its own allowance.
 
 ## Endpoints
 
@@ -447,6 +481,9 @@ Deliberate scope boundaries rather than oversights:
   this panel ever became a real conversation, that is where `SummarizationMiddleware` or
   message trimming would earn its place; today nothing in the interface depends on the
   agent remembering, so neither is pulling its weight.
+- **Rate limiting is in-process.** Counters live in the middleware instance, so N
+  workers means N times the allowance, and a restart forgets everyone. Enough to stop a
+  runaway loop on a demo; a real deployment would keep the counters in Redis.
 - **No authentication.** `user_id` arrives in the request body. Real deployment would take
   it from a verified session, not from the client.
 - **No end-to-end test.** The suite covers each side of the boundary but never runs the
