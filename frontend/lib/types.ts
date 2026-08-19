@@ -5,10 +5,16 @@ export interface WeatherRequest {
   thread_id: string;
 }
 
-/** One measured stretch of work the server did while producing a reply. */
+/**
+ * One measured stretch of work the server did while producing a reply.
+ *
+ * Carries when it started as well as how long it took: the agent runs tool
+ * calls concurrently, so segments can genuinely overlap.
+ */
 export interface TraceSegment {
   label: string;
   ms: number;
+  start_ms: number;
 }
 
 export interface WeatherResponse {
@@ -17,8 +23,8 @@ export interface WeatherResponse {
   temperature_celsius: number | null;
   temperature_fahrenheit: number | null;
   humidity: number | null;
-  /** Measured on the server: each tool call, then the model's share. */
-  trace: TraceSegment[];
+  /** Measured on the server: every model call and every tool call. */
+  trace: Trace | null;
 }
 
 /** A passage the retriever returned, and how close it was to the query. */
@@ -34,11 +40,22 @@ export interface RagRequest {
   thread_id: string;
 }
 
+/**
+ * A measured account of how a reply was produced.
+ *
+ * `total_ms` is wall time and is not the sum of the segments: work can overlap,
+ * and the gaps between steps are the agent's own orchestration.
+ */
+export interface Trace {
+  total_ms: number;
+  segments: TraceSegment[];
+}
+
 export interface RagReply {
   answer: string;
   /** Empty when the model answered without searching at all. */
   sources: Source[];
-  trace: TraceSegment[];
+  trace: Trace | null;
 }
 
 export interface AskRequest {

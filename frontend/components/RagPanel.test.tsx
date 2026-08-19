@@ -18,10 +18,10 @@ const SEARCHED = {
     { text: "I love apples.", score: 0.376, query: "fruits liked" },
     { text: "I enjoy oranges.", score: 0.409, query: "fruits liked" },
   ],
-  trace: [
-    { label: "kb_search", ms: 661 },
-    { label: "model", ms: 2731 },
-  ],
+  trace: { total_ms: 2731.0, segments: [
+    { label: "kb_search", ms: 661, start_ms: 0 },
+    { label: "model", ms: 2731, start_ms: 0 },
+  ] },
 };
 
 const TWO_SEARCHES = {
@@ -30,17 +30,17 @@ const TWO_SEARCHES = {
     { text: "I despise mangos.", score: 0.42, query: "fruits they hate" },
     { text: "I like Lenovo Thinkpads.", score: 0.51, query: "laptops they like" },
   ],
-  trace: [
-    { label: "kb_search", ms: 182 },
-    { label: "kb_search", ms: 216 },
-    { label: "model", ms: 2793 },
-  ],
+  trace: { total_ms: 2793.0, segments: [
+    { label: "kb_search", ms: 182, start_ms: 0 },
+    { label: "kb_search", ms: 216, start_ms: 0 },
+    { label: "model", ms: 2793, start_ms: 0 },
+  ] },
 };
 
 const UNSEARCHED = {
   answer: "That is not in the knowledge base.",
   sources: [],
-  trace: [{ label: "model", ms: 1509 }],
+  trace: { total_ms: 1509.0, segments: [{ label: "model", ms: 1509, start_ms: 0 }] },
 };
 
 beforeEach(() => {
@@ -142,5 +142,32 @@ describe("RagPanel", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("The API is down.");
     expect(screen.getByRole("button", { name: "Ask" })).toBeEnabled();
+  });
+});
+
+describe("Trace lanes", () => {
+  it("draws concurrent searches as overlapping rather than sequential", async () => {
+    // Two searches issued in the same turn run at once. Laid end to end they
+    // would imply an order that never happened and double the time retrieval
+    // appears to take.
+    mockAsk.mockResolvedValue({
+      answer: "Both.",
+      sources: [],
+      trace: { total_ms: 1020.0, segments: [
+        { label: "kb_search", ms: 500, start_ms: 100 },
+        { label: "kb_search", ms: 500, start_ms: 110 },
+        { label: "model", ms: 400, start_ms: 620 },
+      ] },
+    });
+    render(<RagPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+    const rail = await screen.findByRole("img", { name: /arrival trace/i });
+
+    // Overlapping work takes a second row; the whole trace spans 1020ms rather
+    // than the 1400ms its durations add up to.
+    const rows = rail.querySelectorAll(":scope > div");
+    expect(rows).toHaveLength(2);
+    expect(screen.getByText("1.0s")).toBeInTheDocument();
   });
 });

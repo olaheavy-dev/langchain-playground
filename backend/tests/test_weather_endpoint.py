@@ -10,18 +10,21 @@ import httpx
 import pytest
 
 from app.routers import weather as weather_router
-from app.schemas import TraceSegment, WeatherReply, WeatherResponse
+from app.schemas import Trace, TraceSegment, WeatherReply, WeatherResponse
 
 LOCATED = WeatherReply(
     summary='Vienna is a brisk 17 degrees.',
     temperature_celsius=17.0,
     temperature_fahrenheit=63.0,
     humidity=84.0,
-    trace=[
-        TraceSegment(label='locate_user', ms=0.4),
-        TraceSegment(label='get_weather', ms=812.0),
-        TraceSegment(label='model', ms=1440.0),
-    ],
+    trace=Trace(
+        total_ms=2300.0,
+        segments=[
+            TraceSegment(label='locate_user', ms=0.4, start_ms=10.0),
+            TraceSegment(label='get_weather', ms=812.0, start_ms=20.0),
+            TraceSegment(label='model', ms=1440.0, start_ms=840.0),
+        ],
+    ),
 )
 
 
@@ -50,11 +53,14 @@ async def test_returns_the_agents_reading(
         'temperature_celsius': 17.0,
         'temperature_fahrenheit': 63.0,
         'humidity': 84.0,
-        'trace': [
-            {'label': 'locate_user', 'ms': 0.4},
-            {'label': 'get_weather', 'ms': 812.0},
-            {'label': 'model', 'ms': 1440.0},
-        ],
+        'trace': {
+            'total_ms': 2300.0,
+            'segments': [
+                {'label': 'locate_user', 'ms': 0.4, 'start_ms': 10.0},
+                {'label': 'get_weather', 'ms': 812.0, 'start_ms': 20.0},
+                {'label': 'model', 'ms': 1440.0, 'start_ms': 840.0},
+            ],
+        },
     }
 
 

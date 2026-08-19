@@ -42,14 +42,21 @@ export function StreamingPanel() {
           // The number that matters for a stream: how long the reader waited
           // before anything at all appeared.
           firstTokenAt = performance.now();
-          setTrace([{ label: "to first token", ms: firstTokenAt - startedAt }]);
+          setTrace([
+            { label: "to first token", ms: firstTokenAt - startedAt, startMs: 0 },
+          ]);
         }
         setAnswer((current) => current + token);
       }
       if (firstTokenAt !== null) {
+        const toFirstToken = firstTokenAt - startedAt;
         setTrace([
-          { label: "to first token", ms: firstTokenAt - startedAt },
-          { label: "reading while it writes", ms: performance.now() - firstTokenAt },
+          { label: "to first token", ms: toFirstToken, startMs: 0 },
+          {
+            label: "reading while it writes",
+            ms: performance.now() - firstTokenAt,
+            startMs: toFirstToken,
+          },
         ]);
       }
     } catch (caught) {

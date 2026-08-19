@@ -7,6 +7,8 @@ export interface TraceSegment {
   label: string;
   /** Milliseconds this stretch took. */
   ms: number;
+  /** Milliseconds from the start of the request to the start of this stretch. */
+  startMs?: number;
   /** Work the model did on its own, drawn hollow rather than filled. */
   hollow?: boolean;
 }
@@ -16,28 +18,66 @@ function format(ms: number): string {
 }
 
 /**
+ * Lay segments out in rows so that overlapping work is visible as overlapping.
+ *
+ * The agent issues tool calls concurrently when the model asks for several at
+ * once, so two searches can occupy the same stretch of time. Stacking those end
+ * to end would invent an order and overstate how long retrieval took, so each
+ * one that would collide with a row already in use starts a new row.
+ */
+function toRows(segments: TraceSegment[]): TraceSegment[][] {
+  const rows: TraceSegment[][] = [];
+  for (const segment of [...segments].sort(
+    (a, b) => (a.startMs ?? 0) - (b.startMs ?? 0),
+  )) {
+    const start = segment.startMs ?? 0;
+    const row = rows.find((candidate) => {
+      const last = candidate[candidate.length - 1];
+      return (last.startMs ?? 0) + last.ms <= start + 0.5;
+    });
+    if (row) row.push(segment);
+    else rows.push([segment]);
+  }
+  return rows;
+}
+
+/**
  * The arrival trace: how an answer actually came back, drawn to scale from
  * measured timings.
  *
  * This is the one element the three patterns can be compared across. The
- * tool-calling agent draws several segments because it made several round
- * trips; the chat model draws one solid block because nothing was visible until
- * everything was; the stream draws a rail that fills while tokens land. Same
- * rail, three different shapes -- which is the difference the whole project is
- * about.
+ * tool-calling agent draws a run of alternating model and tool segments because
+ * it went round the loop several times; the chat model draws one solid block
+ * because nothing was visible until everything was; the stream draws a rail
+ * that fills while tokens land. Same axis, different shapes -- which is the
+ * difference the whole project is about.
  */
 export function Trace({
   segments,
+  totalMs,
   live = false,
   className,
 }: {
   segments: TraceSegment[];
+  /**
+   * Wall time for the whole request. Given rather than summed: work overlaps,
+   * and the gaps between segments are real time nobody measured directly.
+   */
+  totalMs?: number;
   /** Still arriving, so the rail pulses and the total is provisional. */
   live?: boolean;
   className?: string;
 }) {
-  const total = segments.reduce((sum, segment) => sum + segment.ms, 0);
+  if (segments.length === 0) return null;
+
+  const measured = Math.max(
+    ...segments.map((segment) => (segment.startMs ?? 0) + segment.ms),
+  );
+  const total = Math.max(totalMs ?? 0, measured);
   if (total <= 0) return null;
+
+  const rows = toRows(segments);
+  const last = segments[segments.length - 1];
 
   return (
     <figure className={cx("mt-6", className)}>
@@ -49,27 +89,32 @@ export function Trace({
       </figcaption>
 
       <div
-        className="mt-2 flex h-1.5 w-full gap-px overflow-hidden rounded-sm bg-surface-subtle"
+        className="mt-2 space-y-px"
         role="img"
         aria-label={`Arrival trace: ${segments
           .map((segment) => `${segment.label}, ${format(segment.ms)}`)
           .join("; ")}`}
       >
-        {segments.map((segment, index) => (
-          <span
-            key={`${segment.label}-${index}`}
-            style={{ width: `${(segment.ms / total) * 100}%` }}
-            className={cx(
-              "trace-draw h-full",
-              live && index === segments.length - 1
-                ? "bg-signal caret-blink"
-                : segment.hollow
-                  // A tint of the accent rather than the tint token, which was
-                  // too close to the surface to read in dark mode.
-                  ? "bg-accent/35"
-                  : "bg-accent",
-            )}
-          />
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="relative h-1.5 w-full rounded-sm bg-surface-subtle">
+            {row.map((segment, index) => (
+              <span
+                key={`${segment.label}-${index}`}
+                style={{
+                  left: `${((segment.startMs ?? 0) / total) * 100}%`,
+                  width: `${Math.max((segment.ms / total) * 100, 0.6)}%`,
+                }}
+                className={cx(
+                  "trace-draw absolute inset-y-0 rounded-sm",
+                  live && segment === last
+                    ? "bg-signal caret-blink"
+                    : segment.hollow
+                      ? "bg-accent/35"
+                      : "bg-accent",
+                )}
+              />
+            ))}
+          </div>
         ))}
       </div>
 
@@ -83,7 +128,7 @@ export function Trace({
               aria-hidden="true"
               className={cx(
                 "inline-block size-1.5 translate-y-px rounded-sm",
-                live && index === segments.length - 1
+                live && segment === last
                   ? "bg-signal"
                   : segment.hollow
                     ? "border border-accent"

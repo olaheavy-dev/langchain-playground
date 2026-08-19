@@ -41,6 +41,7 @@ export function WeatherPanel() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [trace, setTrace] = useState<TraceSegment[] | null>(null);
+  const [totalMs, setTotalMs] = useState(0);
   const groupId = useId();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -70,11 +71,17 @@ export function WeatherPanel() {
       // server cannot, which is the round trip minus everything it accounted
       // for.
       const roundTrip = performance.now() - startedAt;
-      const serverMs = reply.trace.reduce((total, segment) => total + segment.ms, 0);
+      const serverMs = reply.trace?.total_ms ?? 0;
+      // The server reports offsets from its own start, so everything it did
+      // shifts along by the time the request spent on the wire.
+      const networkMs = Math.max(roundTrip - serverMs, 0);
+      setTotalMs(roundTrip);
       setTrace([
-        { label: "network", ms: Math.max(roundTrip - serverMs, 0) },
-        ...reply.trace.map((segment) => ({
-          ...segment,
+        { label: "network", ms: networkMs, startMs: 0 },
+        ...(reply.trace?.segments ?? []).map((segment) => ({
+          label: segment.label,
+          ms: segment.ms,
+          startMs: networkMs + segment.start_ms,
           // Tool calls are the agent reaching outside itself: drawn hollow so
           // the model's own share is legible at a glance.
           hollow: segment.label !== "model",
@@ -174,7 +181,7 @@ export function WeatherPanel() {
 
           {trace && (
             <div className="border-t border-border-subtle px-6 pt-1 pb-6">
-              <Trace segments={trace} />
+              <Trace segments={trace} totalMs={totalMs} />
             </div>
           )}
 

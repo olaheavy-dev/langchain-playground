@@ -18,11 +18,11 @@ const LOCATED = {
   temperature_celsius: 17,
   temperature_fahrenheit: 63,
   humidity: 84,
-  trace: [
-    { label: "locate_user", ms: 0.4 },
-    { label: "get_weather", ms: 812 },
-    { label: "model", ms: 1440 },
-  ],
+  trace: { total_ms: 1440.0, segments: [
+    { label: "locate_user", ms: 0.4, start_ms: 0 },
+    { label: "get_weather", ms: 812, start_ms: 0 },
+    { label: "model", ms: 1440, start_ms: 0 },
+  ] },
 };
 
 const UNLOCATED = {
@@ -30,7 +30,7 @@ const UNLOCATED = {
   temperature_celsius: null,
   temperature_fahrenheit: null,
   humidity: null,
-  trace: [{ label: "model", ms: 900 }],
+  trace: { total_ms: 900.0, segments: [{ label: "model", ms: 900, start_ms: 0 }] },
 };
 
 beforeEach(() => {

@@ -1,6 +1,5 @@
 """Tool-calling agent: the model decides when to call our own functions."""
 
-import time
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -12,7 +11,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
 from app.agents.base import get_model
-from app.agents.timing import finish, record, start_collecting
+from app.agents.middleware import TracingMiddleware
+from app.agents.timing import finish, start_collecting
 from app.schemas import WeatherReply, WeatherResponse
 
 SYSTEM_PROMPT = (
@@ -34,27 +34,15 @@ class Context:
 
 @tool('get_weather', return_direct=False, description='Return weather information for a given city.')
 async def get_weather(city: str) -> dict[str, Any]:
-    started = time.perf_counter()
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f'https://wttr.in/{city}?format=j1')
-            response.raise_for_status()
-            return response.json()
-    finally:
-        record('get_weather', started)
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(f'https://wttr.in/{city}?format=j1')
+        response.raise_for_status()
+        return response.json()
 
 
 @tool('locate_user', description="Look up a user's city based on their context")
 def locate_user(runtime: ToolRuntime[Context]) -> str:
-    started = time.perf_counter()
-    try:
-        return _locate(runtime.context.user_id)
-    finally:
-        record('locate_user', started)
-
-
-def _locate(user_id: str) -> str:
-    match user_id:
+    match runtime.context.user_id:
         case 'ABC123':
             return 'Vienna'
         case 'XYZ456':
@@ -78,6 +66,7 @@ def _get_agent():
         # In-process memory: fine for development, but conversations are lost on
         # restart and are not shared across workers. Swap for a database-backed
         # checkpointer before running more than one process.
+        middleware=[TracingMiddleware()],
         checkpointer=InMemorySaver(),
     )
 

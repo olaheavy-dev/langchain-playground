@@ -40,7 +40,13 @@ export function PythonPanel() {
       setAnswer(result.answer);
       // One segment, because there is only one: the whole answer was written
       // before any of it was sent.
-      setTrace([{ label: "silence, then the whole answer", ms: performance.now() - startedAt }]);
+      setTrace([
+        {
+          label: "silence, then the whole answer",
+          ms: performance.now() - startedAt,
+          startMs: 0,
+        },
+      ]);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(

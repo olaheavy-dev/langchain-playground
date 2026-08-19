@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from app.routers import rag as rag_router
-from app.schemas import RagReply, Source, TraceSegment
+from app.schemas import RagReply, Source, Trace, TraceSegment
 
 ANSWERED = RagReply(
     answer='They like apples, oranges and pears.',
@@ -17,7 +17,13 @@ ANSWERED = RagReply(
         Source(text='I love apples.', score=0.82, query='fruits the person likes'),
         Source(text='I enjoy oranges.', score=0.79, query='fruits the person likes'),
     ],
-    trace=[TraceSegment(label='kb_search', ms=210.0), TraceSegment(label='model', ms=1400.0)],
+    trace=Trace(
+        total_ms=1650.0,
+        segments=[
+            TraceSegment(label='kb_search', ms=210.0, start_ms=5.0),
+            TraceSegment(label='model', ms=1400.0, start_ms=220.0),
+        ],
+    ),
 )
 
 
@@ -41,7 +47,8 @@ async def test_returns_the_answer_with_what_it_was_drawn_from(
         'I enjoy oranges.',
     ]
     assert body['sources'][0]['query'] == 'fruits the person likes'
-    assert [segment['label'] for segment in body['trace']] == ['kb_search', 'model']
+    assert [segment['label'] for segment in body['trace']['segments']] == ['kb_search', 'model']
+    assert body['trace']['total_ms'] == 1650.0
 
 
 async def test_an_unsearched_answer_reports_no_sources(
@@ -52,7 +59,10 @@ async def test_an_unsearched_answer_reports_no_sources(
     knowledge base."""
 
     async def fake_agent(question: str, thread_id: str) -> RagReply:
-        return RagReply(answer='I have no idea.', trace=[TraceSegment(label='model', ms=900.0)])
+        return RagReply(
+            answer='I have no idea.',
+            trace=Trace(total_ms=900.0, segments=[TraceSegment(label='model', ms=900.0)]),
+        )
 
     monkeypatch.setattr(rag_router, 'ask_rag_agent', fake_agent)
 

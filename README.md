@@ -151,11 +151,16 @@ curl -X POST http://127.0.0.1:8000/api/weather \
   "temperature_celsius": 27.0,
   "temperature_fahrenheit": 80.0,
   "humidity": 45.0,
-  "trace": [
-    { "label": "locate_user", "ms": 0.004 },
-    { "label": "get_weather", "ms": 166.1 },
-    { "label": "model", "ms": 4871.5 }
-  ]
+  "trace": {
+    "total_ms": 4041.7,
+    "segments": [
+      { "label": "model", "ms": 1301.4, "start_ms": 2.1 },
+      { "label": "locate_user", "ms": 0.9, "start_ms": 1306.0 },
+      { "label": "model", "ms": 694.2, "start_ms": 1309.8 },
+      { "label": "get_weather", "ms": 167.3, "start_ms": 2007.5 },
+      { "label": "model", "ms": 1400.6, "start_ms": 2180.2 }
+    ]
+  }
 }
 ```
 
@@ -164,10 +169,15 @@ resolves to `Unknown`, and the agent says so rather than guessing — the three 
 fields come back `null`, so callers must handle the case instead of reading a fabricated
 `0.0`.
 
-`trace` is measured, not estimated: each tool call is timed where it runs, and the model's
-share is whatever the total is once those are subtracted. The interface draws it as a rail
-under the answer, which is how the three patterns become comparable — the agent's time is
-mostly the model thinking, while a stream's is a short wait and then a long read.
+`trace` is measured, not estimated. Middleware wraps every model call and every tool call,
+so each segment is timed where it happens and none is inferred by subtraction — which is
+also why the agent shows *three* model calls rather than one: that is the loop it actually
+ran.
+
+`total_ms` is wall time and is deliberately not the sum of the segments. Tool calls issued
+in the same turn run concurrently, so segments can overlap; and the gaps between them are
+the agent's own orchestration. The interface draws the segments against the total, so both
+overlap and idle time are visible without inventing a position for time nobody measured.
 
 `thread_id` identifies the conversation and `user_id` the person; they are deliberately
 separate, so one user can hold several independent conversations.
@@ -199,11 +209,15 @@ curl -X POST http://127.0.0.1:8000/api/rag \
     { "text": "I despise mangos.", "score": 0.48, "query": "fruits they hate" },
     { "text": "I like Lenovo Thinkpads.", "score": 0.559, "query": "laptops they like" }
   ],
-  "trace": [
-    { "label": "kb_search", "ms": 753.0 },
-    { "label": "kb_search", "ms": 756.4 },
-    { "label": "model", "ms": 2210.8 }
-  ]
+  "trace": {
+    "total_ms": 4188.0,
+    "segments": [
+      { "label": "model", "ms": 2003.1, "start_ms": 1.9 },
+      { "label": "kb_search", "ms": 578.4, "start_ms": 2010.2 },
+      { "label": "kb_search", "ms": 610.7, "start_ms": 2010.9 },
+      { "label": "model", "ms": 1000.3, "start_ms": 3180.0 }
+    ]
+  }
 }
 ```
 
@@ -234,14 +248,14 @@ separate one SSE message from the next.
 
 ## Tests
 
-102 tests, none of which call a model or the network. Both suites, plus lint, a typecheck
+111 tests, none of which call a model or the network. Both suites, plus lint, a typecheck
 and a production build, run on every push and pull request
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) -- no API key needed, because
 nothing in the suite reaches a model.
 
 ```bash
-cd backend  && uv run pytest      # 43 tests
-cd frontend && npm test           # 59 tests
+cd backend  && uv run pytest      # 50 tests
+cd frontend && npm test           # 61 tests
 ```
 
 **Backend** — `pytest` with `pytest-asyncio`, driving the app in-process through
@@ -371,6 +385,19 @@ the agent sometimes answered without calling `get_weather` at all — reporting 
 from the model's own head. The system prompt now forbids that, and the trace is where it
 would show up again.
 
+### Timing as middleware
+
+Each agent carries a `TracingMiddleware` that wraps model calls and tool calls, rather than
+each tool timing itself. Two things follow. A tool no longer knows it is being measured, so
+one added later is traced without anyone remembering to instrument it. And the model's
+share stopped being a subtraction: it used to be "the total, minus the tools", which
+quietly charged the agent's own orchestration to the model.
+
+Measuring each call directly then exposed something subtraction had hidden — the agent runs
+tool calls concurrently, so two searches issued together overlap in real time. Adding their
+durations both invented an order and overstated retrieval, which is why segments carry a
+start offset and the trace is drawn as a timeline rather than a stacked bar.
+
 ### Retrieval as a tool, and a failing tool that answers
 
 The knowledge base is a tool the model may call rather than a step that always runs, which
@@ -405,9 +432,6 @@ Deliberate scope boundaries rather than oversights:
   interface is identical, so it is a one-line swap.
 - **No authentication.** `user_id` arrives in the request body. Real deployment would take
   it from a verified session, not from the client.
-- **The model's share of the trace is derived, not timed.** There is no point in the agent
-  loop where only the model is running that can be wrapped, so its segment is the total
-  minus the measured tool calls. Everything else in the trace is measured directly.
 - **No end-to-end test.** The suite covers each side of the boundary but never runs the
   two together against a live model, so a schema change that breaks the contract would
   pass both halves. A Playwright run against a recorded backend would close that gap.

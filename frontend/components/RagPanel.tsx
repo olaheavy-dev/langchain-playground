@@ -153,10 +153,17 @@ export function RagPanel() {
             )}
           </div>
 
-          <Trace segments={reply.trace.map((segment) => ({
-            ...segment,
-            hollow: segment.label !== "model",
-          }))} />
+          {reply.trace && (
+            <Trace
+              totalMs={reply.trace.total_ms}
+              segments={reply.trace.segments.map((segment) => ({
+                label: segment.label,
+                ms: segment.ms,
+                startMs: segment.start_ms,
+                hollow: segment.label !== "model",
+              }))}
+            />
+          )}
         </Card>
       )}
     </div>

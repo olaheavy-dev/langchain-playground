@@ -7,7 +7,6 @@ question that took two searches to answer.
 """
 
 import logging
-import time
 from contextvars import ContextVar
 from functools import lru_cache
 
@@ -18,7 +17,8 @@ from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.checkpoint.memory import InMemorySaver
 
 from app.agents.base import get_embeddings, get_model
-from app.agents.timing import finish, record, start_collecting
+from app.agents.middleware import TracingMiddleware
+from app.agents.timing import finish, start_collecting
 from app.schemas import RagReply, Source
 
 SYSTEM_PROMPT = (
@@ -72,7 +72,6 @@ def _get_store() -> InMemoryVectorStore:
 @tool('kb_search', description='Search the knowledge base of stated opinions about fruit and computers.')
 def kb_search(query: str) -> str:
     """Return the passages closest to the query, and remember them for display."""
-    started = time.perf_counter()
     try:
         hits = _get_store().similarity_search_with_score(query, k=RETRIEVE_COUNT)
         collected = _sources.get(None)
@@ -96,8 +95,6 @@ def kb_search(query: str) -> str:
         # the only symptom is the model apologising in the answer.
         logger.exception('kb_search failed for query %r', query)
         return f'The knowledge base could not be searched: {error}'
-    finally:
-        record('kb_search', started)
 
 
 @lru_cache
@@ -106,6 +103,7 @@ def _get_agent():
         model=get_model(temperature=0.1),
         tools=[kb_search],
         system_prompt=SYSTEM_PROMPT,
+        middleware=[TracingMiddleware()],
         checkpointer=InMemorySaver(),
     )
 

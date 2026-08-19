@@ -18,10 +18,30 @@ class WeatherResponse(BaseModel):
 
 
 class TraceSegment(BaseModel):
-    """One measured stretch of work done while producing a reply."""
+    """One measured stretch of work done while producing a reply.
+
+    Carries when it started as well as how long it took, because the agent runs
+    tool calls concurrently: two searches issued in the same turn overlap in
+    real time, and laying them end to end would both invent an order and
+    overstate how long retrieval took.
+    """
 
     label: str
     ms: float
+    start_ms: float = 0.0
+
+
+class Trace(BaseModel):
+    """A measured account of how a reply was produced.
+
+    total_ms is the wall time, which is not the sum of the segments: work can
+    overlap, and the gaps between steps are the agent's own orchestration. The
+    interface draws the segments against the total, so both are visible without
+    inventing a position for time nobody measured.
+    """
+
+    total_ms: float
+    segments: list[TraceSegment] = []
 
 
 class WeatherReply(WeatherResponse):
@@ -34,7 +54,7 @@ class WeatherReply(WeatherResponse):
     invite it to invent them.
     """
 
-    trace: list[TraceSegment] = []
+    trace: Trace | None = None
 
 
 class Source(BaseModel):
@@ -55,7 +75,7 @@ class RagReply(BaseModel):
     # Empty when the model answered without searching, which is itself worth
     # seeing: it means the answer came from the model, not the knowledge base.
     sources: list[Source] = []
-    trace: list[TraceSegment] = []
+    trace: Trace | None = None
 
 
 class AskRequest(BaseModel):

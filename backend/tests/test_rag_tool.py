@@ -82,17 +82,6 @@ def test_two_searches_accumulate(store) -> None:
     ]
 
 
-def test_each_search_is_timed(store) -> None:
-    store([('I love apples.', 0.81)])
-    rag._sources.set([])
-    _timings.set([])
-
-    rag.kb_search.func('anything')
-    rag.kb_search.func('anything else')
-
-    assert [segment.label for segment in _timings.get()] == ['kb_search', 'kb_search']
-
-
 def test_retrieval_is_capped(store) -> None:
     """Otherwise a small knowledge base returns itself in full and the retrieval
     demonstrates nothing."""
@@ -131,8 +120,6 @@ def test_a_failing_search_answers_the_model_instead_of_raising(
 
     assert 'could not be searched' in returned
     assert 'index unavailable' in returned
-    # Still timed: a slow failure is part of the elapsed time.
-    assert [segment.label for segment in _timings.get()] == ['kb_search']
 
 
 def test_a_failing_search_is_logged(
