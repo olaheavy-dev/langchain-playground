@@ -322,6 +322,50 @@ and data arriving after `[DONE]`. The panels are tested through the interface --
 `NOPE999` must produce three em dashes and no `0`, pressing Stop must actually abort the
 signal, and unmounting mid-stream must not leave a request in flight.
 
+## Evals
+
+The test suite stubs the model everywhere, on purpose: tests have to be fast, free and
+deterministic. That leaves a question nothing else answers — whether the agents actually
+*behave*. Seven cases check that, against the real model:
+
+```bash
+cd backend && uv run python -m evals.run --repeats 3
+```
+
+```
+case                                                      rate    attempts
+--------------------------------------------------------  ------  --------
+weather: known user gets a real reading                   ✓ 100%  3/3
+weather: reading comes from the tool, not the model       ✓ 100%  3/3
+weather: unknown user gets nulls, not a plausible number  ✓ 100%  3/3
+rag: finds the fruit the person likes                     ✓ 100%  3/3
+rag: distinguishes liked from hated                       ✓ 100%  3/3
+rag: searches twice for a two-part question               ✓ 100%  3/3
+rag: declines what the knowledge base cannot answer       ✓ 100%  3/3
+--------------------------------------------------------  ------  --------
+total                                                       100%  21/21
+
+7 cases x 3 attempts in 10s, about $0.0064
+```
+
+Three things make this more than decoration.
+
+**Each case runs several times.** Model output varies between identical calls, so one pass
+could be luck and one failure could be noise. A rate is the honest summary; pass/fail is
+not.
+
+**The predicates check behaviour, not wording.** "Did it retrieve the passage about
+bananas" survives a rephrase; "did it say exactly this" fails on output that is just as
+correct, and a suite that cries wolf gets ignored.
+
+**Two cases are regressions.** The agent was once observed reporting a temperature it never
+fetched, and the knowledge base contains liked and hated fruit phrased almost identically —
+which is exactly where naive similarity search goes wrong. Both are now checked on every
+run.
+
+The harness itself is unit-tested with fake cases, because a harness that has never been
+seen to report a failure is not evidence of anything.
+
 ## Layout
 
 ```
@@ -342,7 +386,8 @@ backend/
 │       ├── weather.py
 │       ├── rag.py
 │       └── copilot.py
-└── tests/                   # pytest, driven in-process over ASGI
+├── tests/                   # pytest, driven in-process over ASGI
+└── evals/                   # behaviour checks against the real model
 
 frontend/
 ├── app/
