@@ -99,6 +99,17 @@ def _retrieved(*expected: str) -> Callable[[RagReply], tuple[bool, str]]:
     return check
 
 
+def _cited(*expected: str) -> Callable[[RagReply], tuple[bool, str]]:
+    def check(reply: RagReply) -> tuple[bool, str]:
+        cited = ' '.join(source.source for source in reply.sources)
+        missing = [name for name in expected if name not in cited]
+        if missing:
+            return False, f'did not cite {", ".join(missing)} (cited: {cited or "nothing"})'
+        return True, f'cited {cited}'
+
+    return check
+
+
 def _both(first, second):
     def check(reply):
         ok, detail = first(reply)
@@ -120,8 +131,9 @@ def _searched_at_least(times: int) -> Callable[[RagReply], tuple[bool, str]]:
 
 
 def _declined_without_inventing(reply: RagReply) -> tuple[bool, str]:
-    if reply.sources:
-        return False, 'searched a knowledge base that cannot answer this'
+    # Searching first is fine and often correct -- the model cannot know the
+    # corpus is silent until it looks. What matters is that it says so instead
+    # of answering from its own knowledge.
     answer = reply.answer.lower()
     admissions = ('not', "don't", 'cannot', "can't", 'no information', 'only')
     if not any(word in answer for word in admissions):
@@ -155,33 +167,49 @@ CASES: list[Case] = [
         tags=['weather', 'honesty'],
     ),
     Case(
-        name='rag: finds the fruit the person likes',
-        why='Retrieval has to surface the passages that answer the question.',
-        run=_rag('What fruits does this person like?'),
-        check=_both(_retrieved('apples', 'oranges'), _mentions('apple')),
+        name='rag: explains a pattern from the docs',
+        why='Retrieval has to surface the section that answers the question.',
+        run=_rag('How does the streaming endpoint work?'),
+        check=_both(_retrieved('server-sent events'), _mentions('token')),
         tags=['rag'],
     ),
     Case(
-        name='rag: distinguishes liked from hated',
+        name='rag: cites the section it drew from',
         why=(
-            'The knowledge base contains both, phrased almost identically, so this '
-            'is where naive similarity search goes wrong.'
+            'A passage with no provenance cannot be checked, which defeats the '
+            'point of showing sources at all.'
         ),
-        run=_rag('What fruits does this person hate?'),
-        check=_both(_retrieved('bananas'), _mentions('banana')),
+        run=_rag('Why is the total time not the sum of the segments?'),
+        check=_cited('trace.md'),
+        tags=['rag'],
+    ),
+    Case(
+        name='rag: distinguishes neighbouring sections',
+        why=(
+            'The corpus explains both what the trace measures and why its total '
+            'differs from the sum, in adjacent sections using much the same '
+            'vocabulary -- which is where similarity search goes wrong.'
+        ),
+        run=_rag('Why is orchestration time not drawn as a segment?'),
+        check=_both(_retrieved('gaps between steps'), _mentions('gap')),
         tags=['rag', 'honesty'],
     ),
     Case(
-        name='rag: searches twice for a two-part question',
-        why='Agentic retrieval means the model may search again; this is that case.',
-        run=_rag('What fruits do they hate, and what laptops do they like?'),
-        check=_both(_searched_at_least(2), _mentions('thinkpad')),
+        name='rag: answers both halves of a two-part question',
+        why=(
+            'A question spanning two sections must not be half-answered. How many '
+            'searches that takes is the model\'s business: this case originally '
+            'demanded two, and failed against an agent that got both answers with '
+            'one well-phrased query -- which is better, not worse.'
+        ),
+        run=_rag('What happens when a tool fails, and how are prices recorded?'),
+        check=_both(_cited('decisions.md', 'trace.md'), _mentions('tool', 'price')),
         tags=['rag'],
     ),
     Case(
         name='rag: declines what the knowledge base cannot answer',
         why='Answering from the model instead is the failure RAG exists to prevent.',
-        run=_rag('Who won the 1998 World Cup?'),
+        run=_rag('Who wrote this project and where do they live?'),
         check=_declined_without_inventing,
         tags=['rag', 'honesty'],
     ),

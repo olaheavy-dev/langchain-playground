@@ -17,35 +17,21 @@ from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.checkpoint.memory import InMemorySaver
 
 from app.agents.base import get_embeddings, get_model
+from app.knowledge import load_chunks
 from app.agents.middleware import TracingMiddleware
 from app.agents.timing import finish, start_collecting
 from app.schemas import RagReply, Source
 
 SYSTEM_PROMPT = (
-    'You are a helpful assistant with access to a small knowledge base of '
-    "someone's stated opinions about fruit and computers.\n\n"
-    'For any question about what this person likes, dislikes, or owns, call '
-    'kb_search first and answer only from what it returns. You may search more '
-    'than once if the first search does not cover the question. If the '
-    'knowledge base does not answer it, say so plainly rather than filling the '
-    'gap from your own knowledge.'
+    'You are a helpful assistant answering questions about the LangChain '
+    'Playground project, using a knowledge base of its own documentation.\n\n'
+    'For any question about the project -- its patterns, its API, how it '
+    'measures things, why it was built a particular way -- call kb_search first '
+    'and answer only from what it returns. You may search more than once if the '
+    'first search does not cover the question. If the knowledge base does not '
+    'answer it, say so plainly rather than filling the gap from your own '
+    'knowledge of LangChain or of similar projects.'
 )
-
-# The knowledge base. Deliberately small and opinionated: with eight short
-# statements you can see exactly which ones a question pulled back, which is
-# hard with a corpus large enough to hide the retrieval behind plausibility.
-DOCUMENTS = [
-    'I love apples.',
-    'I enjoy oranges.',
-    'I think pears taste very good.',
-    'I hate bananas.',
-    'I dislike raspberries.',
-    'I despise mangos.',
-    'I am a fan of MacBooks.',
-    'I like Lenovo Thinkpads.',
-    'I love Linux.',
-    'I hate Windows.',
-]
 
 RETRIEVE_COUNT = 3
 
@@ -66,10 +52,17 @@ def _get_store() -> InMemoryVectorStore:
     which is being sunset. The interface is the same, so swapping in a real
     store later is a one-line change.
     """
-    return InMemoryVectorStore.from_texts(DOCUMENTS, embedding=get_embeddings())
+    chunks = load_chunks()
+    return InMemoryVectorStore.from_texts(
+        [chunk.text for chunk in chunks],
+        embedding=get_embeddings(),
+        # Carried through retrieval so an answer can cite the section it came
+        # from rather than just the sentence.
+        metadatas=[{'source': chunk.source, 'body': chunk.body} for chunk in chunks],
+    )
 
 
-@tool('kb_search', description='Search the knowledge base of stated opinions about fruit and computers.')
+@tool('kb_search', description="Search the LangChain Playground's own documentation.")
 def kb_search(query: str) -> str:
     """Return the passages closest to the query, and remember them for display."""
     try:
@@ -77,7 +70,15 @@ def kb_search(query: str) -> str:
         collected = _sources.get(None)
         if collected is not None:
             collected.extend(
-                Source(text=document.page_content, score=score, query=query)
+                Source(
+                    # The body rather than the embedded chunk: the heading is
+                    # already shown as the citation, and repeating it under
+                    # itself reads as a stutter.
+                    text=document.metadata.get('body') or document.page_content,
+                    score=score,
+                    query=query,
+                    source=document.metadata.get('source', ''),
+                )
                 for document, score in hits
             )
         return '\n'.join(document.page_content for document, _ in hits)

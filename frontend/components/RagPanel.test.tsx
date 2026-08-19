@@ -15,8 +15,8 @@ const mockAsk = vi.mocked(askRagAgent);
 const SEARCHED = {
   answer: "They like apples, oranges and pears.",
   sources: [
-    { text: "I love apples.", score: 0.376, query: "fruits liked" },
-    { text: "I enjoy oranges.", score: 0.409, query: "fruits liked" },
+    { text: "I love apples.", score: 0.376, query: "fruits liked", source: "patterns.md — Tool-calling agent" },
+    { text: "I enjoy oranges.", score: 0.409, query: "fruits liked", source: "patterns.md — Tool-calling agent" },
   ],
   trace: { total_ms: 2731.0, input_tokens: 900, output_tokens: 85, cached_input_tokens: 0, model_calls: 3, cost_usd: 0.0005, segments: [
     { label: "kb_search", ms: 661, start_ms: 0 },
@@ -27,8 +27,8 @@ const SEARCHED = {
 const TWO_SEARCHES = {
   answer: "They hate mangos, and like Thinkpads.",
   sources: [
-    { text: "I despise mangos.", score: 0.42, query: "fruits they hate" },
-    { text: "I like Lenovo Thinkpads.", score: 0.51, query: "laptops they like" },
+    { text: "I despise mangos.", score: 0.42, query: "fruits they hate", source: "decisions.md — Nullable readings" },
+    { text: "I like Lenovo Thinkpads.", score: 0.51, query: "laptops they like", source: "trace.md — Cost reporting" },
   ],
   trace: { total_ms: 2793.0, input_tokens: 900, output_tokens: 85, cached_input_tokens: 0, model_calls: 3, cost_usd: 0.0005, segments: [
     { label: "kb_search", ms: 182, start_ms: 0 },

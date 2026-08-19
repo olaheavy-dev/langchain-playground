@@ -5,7 +5,7 @@ worth asserting is that the tool records what it retrieved and how long it took,
 not that OpenAI returns vectors.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -17,6 +17,9 @@ from app.agents.timing import _timings
 @dataclass
 class FakeDocument:
     page_content: str
+    # Retrieval carries the section a chunk came from, so the fake has to as
+    # well or the tool cannot cite it.
+    metadata: dict[str, str] = field(default_factory=lambda: {'source': 'patterns.md — Chat model'})
 
 
 class FakeStore:
@@ -40,7 +43,8 @@ def store(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_the_model_sees_only_the_passages(store) -> None:
-    """The scores are for the interface, not for the model -- it gets prose."""
+    """The scores and citations are for the interface, not for the model -- it
+    gets prose."""
     store([('I love apples.', 0.81), ('I enjoy oranges.', 0.77)])
     rag._sources.set([])
     _timings.set([])
@@ -142,3 +146,15 @@ def test_a_failing_search_is_logged(
 
     assert 'kb_search failed' in caplog.text
     assert 'fruit' in caplog.text
+
+
+def test_a_citation_travels_with_each_passage(store) -> None:
+    """A passage with no provenance cannot be checked, which defeats the point
+    of showing sources at all."""
+    store([('Tokens are pushed over server-sent events.', 0.62)])
+    rag._sources.set([])
+    _timings.set([])
+
+    rag.kb_search.func('how does streaming work')
+
+    assert rag._sources.get()[0].source == 'patterns.md — Chat model'
