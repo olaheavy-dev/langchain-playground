@@ -6,6 +6,7 @@ interesting cases are visible: a question answered without searching, and a
 question that took two searches to answer.
 """
 
+import logging
 import time
 from contextvars import ContextVar
 from functools import lru_cache
@@ -14,12 +15,10 @@ from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_core.runnables import RunnableConfig
 from langchain_core.vectorstores import InMemoryVectorStore
-from langchain_openai import OpenAIEmbeddings
 from langgraph.checkpoint.memory import InMemorySaver
 
-from app.agents.base import get_model
+from app.agents.base import get_embeddings, get_model
 from app.agents.timing import finish, record, start_collecting
-from app.config import get_settings
 from app.schemas import RagReply, Source
 
 SYSTEM_PROMPT = (
@@ -50,6 +49,8 @@ DOCUMENTS = [
 
 RETRIEVE_COUNT = 3
 
+logger = logging.getLogger(__name__)
+
 # Passages retrieved while serving the current request, so the answer can be
 # shown alongside what it was drawn from.
 _sources: ContextVar[list[Source]] = ContextVar('sources')
@@ -65,12 +66,7 @@ def _get_store() -> InMemoryVectorStore:
     which is being sunset. The interface is the same, so swapping in a real
     store later is a one-line change.
     """
-    settings = get_settings()
-    embeddings = OpenAIEmbeddings(
-        model='text-embedding-3-large',
-        api_key=settings.openai_api_key,
-    )
-    return InMemoryVectorStore.from_texts(DOCUMENTS, embedding=embeddings)
+    return InMemoryVectorStore.from_texts(DOCUMENTS, embedding=get_embeddings())
 
 
 @tool('kb_search', description='Search the knowledge base of stated opinions about fruit and computers.')
@@ -93,6 +89,12 @@ def kb_search(query: str) -> str:
         # state is replayed on the next request, the whole thread stays broken
         # for good. Answering with the failure keeps the conversation valid and
         # lets the model say it could not search.
+        #
+        # Logged loudly, because handling it this way means the request still
+        # returns 200 and the access log looks perfectly healthy. Without this
+        # line a broken knowledge base is invisible from the server side, and
+        # the only symptom is the model apologising in the answer.
+        logger.exception('kb_search failed for query %r', query)
         return f'The knowledge base could not be searched: {error}'
     finally:
         record('kb_search', started)

@@ -344,11 +344,15 @@ blank-line delimiter and holds back any trailing partial message for the next ch
 ### Configuration and secrets
 
 Settings are typed and validated at startup via pydantic-settings, so a missing key fails
-immediately with a clear message rather than at first request. The API key is passed
-explicitly to `init_chat_model`: pydantic-settings reads `.env` into the settings object
-but does not export values into `os.environ`, where LangChain would otherwise look — a
-failure mode worth knowing about, since the resulting error points at credentials rather
-than at configuration.
+immediately with a clear message rather than at first request.
+
+The catch is that pydantic-settings reads `.env` into the settings object and stops there —
+it never writes `os.environ`, which is the only place the OpenAI SDK looks. `load_dotenv()`
+does the opposite, which is why the original scripts needed no key passed anywhere. So
+every client here takes its key explicitly, and every client is built in `agents/base.py`
+so that none can be constructed without one. That containment is the actual lesson: the
+first version of the retrieval agent built its own embedding client, and the resulting
+"Missing credentials" pointed at the key rather than at the plumbing.
 
 ### Designing for the subject rather than the template
 

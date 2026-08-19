@@ -133,3 +133,25 @@ def test_a_failing_search_answers_the_model_instead_of_raising(
     assert 'index unavailable' in returned
     # Still timed: a slow failure is part of the elapsed time.
     assert [segment.label for segment in _timings.get()] == ['kb_search']
+
+
+def test_a_failing_search_is_logged(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Answering the model instead of raising means the request still returns
+    200 and the access log looks healthy, so the failure has to be shouted
+    somewhere or a broken knowledge base is invisible from the server side."""
+
+    class BrokenStore:
+        def similarity_search_with_score(self, query: str, k: int):
+            raise RuntimeError('index unavailable')
+
+    monkeypatch.setattr(rag, '_get_store', lambda: BrokenStore())
+    rag._sources.set([])
+    _timings.set([])
+
+    with caplog.at_level('ERROR'):
+        rag.kb_search.func('fruit')
+
+    assert 'kb_search failed' in caplog.text
+    assert 'fruit' in caplog.text
