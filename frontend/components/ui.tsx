@@ -84,7 +84,9 @@ export function Textarea({
     <textarea
       {...props}
       className={cx(
-        "w-full resize-none rounded-lg border border-border-subtle bg-surface",
+        // border-interactive, not border-subtle: this border is the only thing
+        // that says "input", so it has to clear 3:1.
+        "w-full resize-none rounded-lg border border-border-interactive bg-surface",
         "px-4 py-3 text-[15px] leading-relaxed text-text",
         "placeholder:text-text-faint",
         "transition-colors duration-150 hover:border-border-strong",

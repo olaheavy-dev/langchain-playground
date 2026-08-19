@@ -8,6 +8,18 @@
   Light is defined on bare :root. Dark is redefined twice: once for the system
   preference (guarded so an explicit light choice still wins) and once for an
   explicit dark choice.
+
+  Contrast, measured rather than eyeballed (WCAG 2.1 AA), against --surface:
+
+               light   dark
+    --text     17.6    16.7
+    --text-muted 6.8    7.6
+    --text-faint 5.1    5.3    <- 12px label text, so it needs 4.5:1, not 3:1
+    --accent     6.3    4.9
+    --border-interactive 3.3   3.2   <- the sole boundary of an input
+
+  Re-measure if you change a hue. --border-subtle and --border-strong are
+  decorative and deliberately below 3:1.
 */
 :root {
   --canvas: #fbfaf9;
@@ -15,14 +27,15 @@
   --surface-subtle: #f5f4f2;
   --border-subtle: #e8e5e1;
   --border-strong: #d7d3cd;
+  /* The only boundary a control has, so it clears 3:1 where the others need not */
+  --border-interactive: #948d84;
   --text: #1a1917;
-  --text-muted: #6b6660;
-  --text-faint: #9a948c;
+  --text-muted: #5f5a54;
+  --text-faint: #736e67;
   --accent: #4f46e5;
   --accent-hover: #4338ca;
   --accent-contrast: #ffffff;
   --accent-tint: #eef2ff;
-  --accent-ring: rgb(79 70 229 / 0.35);
   --positive: #0f766e;
   --negative: #b91c1c;
   --shadow-card: 0 1px 2px rgb(23 23 23 / 0.04), 0 4px 16px rgb(23 23 23 / 0.05);
@@ -35,14 +48,14 @@
     --surface-subtle: #1a1a1d;
     --border-subtle: #26262a;
     --border-strong: #35353b;
+    --border-interactive: #66666f;
     --text: #f5f4f2;
-    --text-muted: #9c9a96;
-    --text-faint: #6e6c68;
+    --text-muted: #a8a6a1;
+    --text-faint: #8b8983;
     --accent: #7c74f0;
     --accent-hover: #8b84f5;
     --accent-contrast: #0b0b0c;
     --accent-tint: #1b1a2e;
-    --accent-ring: rgb(124 116 240 / 0.4);
     --positive: #2dd4bf;
     --negative: #f87171;
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.24);
@@ -55,14 +68,14 @@
   --surface-subtle: #1a1a1d;
   --border-subtle: #26262a;
   --border-strong: #35353b;
+  --border-interactive: #66666f;
   --text: #f5f4f2;
-  --text-muted: #9c9a96;
-  --text-faint: #6e6c68;
+  --text-muted: #a8a6a1;
+  --text-faint: #8b8983;
   --accent: #7c74f0;
   --accent-hover: #8b84f5;
   --accent-contrast: #0b0b0c;
   --accent-tint: #1b1a2e;
-  --accent-ring: rgb(124 116 240 / 0.4);
   --positive: #2dd4bf;
   --negative: #f87171;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.24);
@@ -74,6 +87,7 @@
   --color-surface-subtle: var(--surface-subtle);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
+  --color-border-interactive: var(--border-interactive);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-text-faint: var(--text-faint);
@@ -95,9 +109,11 @@ body {
   color: var(--text);
 }
 
-/* One restrained focus ring, applied consistently to every interactive element */
+/* One focus ring, applied consistently to every interactive element. Full accent
+   rather than a tinted one: at 35% alpha this composited to 1.76:1, well under
+   the 3:1 a focus indicator needs to be findable. */
 :focus-visible {
-  outline: 2px solid var(--accent-ring);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 

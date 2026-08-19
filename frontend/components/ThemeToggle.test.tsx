@@ -34,6 +34,17 @@ describe("ThemeToggle", () => {
     expect(localStorage.getItem("theme")).toBe("light");
   });
 
+  it("keeps its options at a usable touch size", () => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    render(<ThemeToggle />);
+
+    // min-h-11 is the 44px minimum; the earlier target was 28px. jsdom has no
+    // layout, so this asserts the class that sets it.
+    for (const name of ["Light theme", "Dark theme"]) {
+      expect(screen.getByRole("radio", { name })).toHaveClass("min-h-11");
+    }
+  });
+
   it("follows an attribute change made from outside React", async () => {
     document.documentElement.setAttribute("data-theme", "light");
     render(<ThemeToggle />);

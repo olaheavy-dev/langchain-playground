@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ApiError, askPythonCopilot } from "@/lib/api";
 import { Markdown } from "./Markdown";
@@ -17,21 +17,30 @@ export function PythonPanel() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abandon an unanswered question if the panel goes away.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   async function run() {
     if (!question.trim() || loading) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
     setAnswer(null);
     try {
-      const result = await askPythonCopilot(question);
+      const result = await askPythonCopilot(question, controller.signal);
       setAnswer(result.answer);
     } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(
         caught instanceof ApiError ? caught.message : "Something went wrong.",
       );
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   }
 

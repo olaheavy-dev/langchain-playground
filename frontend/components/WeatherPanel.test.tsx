@@ -90,6 +90,26 @@ describe("WeatherPanel", () => {
     expect(screen.getByRole("button", { name: /get the weather/i })).toBeEnabled();
   });
 
+  it("aborts an in-flight request when the panel unmounts", async () => {
+    // Switching agent mid-request must not leave the slowest of the three
+    // panels running against a dead component. The request is held open, so
+    // it is genuinely in flight at the moment of unmount.
+    let signal: AbortSignal | undefined;
+    mockFetchWeather.mockImplementation(
+      (_request, received) =>
+        new Promise(() => {
+          signal = received;
+        }),
+    );
+    const view = render(<WeatherPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
+    await waitFor(() => expect(signal).toBeDefined());
+    view.unmount();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
   it("clears the previous result before the next request resolves", async () => {
     mockFetchWeather.mockResolvedValueOnce(LOCATED);
     mockFetchWeather.mockRejectedValueOnce(new ApiError("The API is down."));

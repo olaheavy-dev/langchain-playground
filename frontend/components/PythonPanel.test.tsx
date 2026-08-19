@@ -26,7 +26,9 @@ describe("PythonPanel", () => {
     await userEvent.type(box, "What is the GIL?");
     await userEvent.click(screen.getByRole("button", { name: "Ask" }));
 
-    await waitFor(() => expect(mockAsk).toHaveBeenCalledWith("What is the GIL?"));
+    await waitFor(() =>
+      expect(mockAsk).toHaveBeenCalledWith("What is the GIL?", expect.any(AbortSignal)),
+    );
     expect(await screen.findByText("Released in 1991.")).toBeInTheDocument();
   });
 
@@ -73,6 +75,23 @@ describe("PythonPanel", () => {
 
     expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
     expect(mockAsk).not.toHaveBeenCalled();
+  });
+
+  it("aborts an unanswered question when the panel unmounts", async () => {
+    let signal: AbortSignal | undefined;
+    mockAsk.mockImplementation(
+      (_question, received) =>
+        new Promise(() => {
+          signal = received;
+        }),
+    );
+    const view = render(<PythonPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+    await waitFor(() => expect(signal).toBeDefined());
+    view.unmount();
+
+    expect(signal?.aborted).toBe(true);
   });
 
   it("shows an error and re-enables the button", async () => {

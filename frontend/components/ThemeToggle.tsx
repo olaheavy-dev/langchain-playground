@@ -59,7 +59,9 @@ export function ThemeToggle() {
           aria-label={option === "light" ? "Light theme" : "Dark theme"}
           onClick={() => choose(option)}
           className={cx(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-[6px] px-2.5 py-1.5",
+            // min-h-11 is the 44px touch minimum, stated outright rather than
+            // derived from padding -- py-1.5 previously left the target at 28px.
+            "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-2",
             "text-xs font-medium capitalize transition-colors duration-150",
             theme === option
               ? "bg-surface-subtle text-text"

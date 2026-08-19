@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { ApiError, fetchWeather } from "@/lib/api";
 import { KNOWN_USERS, type WeatherResponse } from "@/lib/types";
@@ -38,20 +38,36 @@ export function WeatherPanel() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const groupId = useId();
+  const abortRef = useRef<AbortController | null>(null);
+
+  // The agent makes two tool calls and a model round trip, so this is the
+  // slowest of the three panels -- abandon it if the panel goes away.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   async function run() {
+    if (loading) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
     setResult(null);
     try {
       // One thread per user, so each user keeps their own conversation.
-      setResult(await fetchWeather({ user_id: userId, thread_id: `thread-${userId}` }));
+      setResult(
+        await fetchWeather(
+          { user_id: userId, thread_id: `thread-${userId}` },
+          controller.signal,
+        ),
+      );
     } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(
         caught instanceof ApiError ? caught.message : "Something went wrong.",
       );
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   }
 
