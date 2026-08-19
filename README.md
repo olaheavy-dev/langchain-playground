@@ -8,7 +8,11 @@ make the differences between them visible and comparable side by side.
 **Stack:** FastAPI · LangChain · LangGraph · Python 3.13 · Next.js 16 · React 19 ·
 TypeScript · Tailwind CSS v4 · pytest · Vitest
 
-![Home](docs/images/01-home.jpg)
+![The four patterns, and the trace that compares them](docs/images/demo.gif)
+
+*Asking the tool-calling agent for the weather, then asking the knowledge base how the
+project's own streaming endpoint works — with the arrival trace drawing itself as each step
+completes.*
 
 | Pattern | Module | Arrival | What it demonstrates |
 | --- | --- | --- | --- |
