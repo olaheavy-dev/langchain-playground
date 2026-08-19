@@ -6,8 +6,8 @@ import { HealthIndicator } from "@/components/HealthIndicator";
 import { PythonPanel } from "@/components/PythonPanel";
 import { StreamingPanel } from "@/components/StreamingPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrivalGlyph } from "@/components/Trace";
 import { WeatherPanel } from "@/components/WeatherPanel";
-import { ChatIcon, LogoMark, StreamIcon, WeatherIcon } from "@/components/icons";
 import { cx } from "@/components/ui";
 import type { AgentId } from "@/lib/types";
 
@@ -18,7 +18,8 @@ interface Agent {
   title: string;
   description: string;
   endpoint: string;
-  icon: (props: { className?: string }) => ReactNode;
+  /** How this pattern's output arrives, which is the thing being compared. */
+  shape: "segmented" | "block" | "filling";
   panel: () => ReactNode;
 }
 
@@ -27,33 +28,33 @@ const AGENTS: Agent[] = [
     id: "weather",
     name: "Weather agent",
     tagline: "Tool calling",
-    title: "Tool-calling agent",
+    title: "The model calls your functions",
     description:
-      "The model decides when to call your own functions, then returns a typed result rather than prose.",
+      "Nothing arrives until the agent has resolved who is asking, looked up their city and read the weather there. Several round trips, one typed result.",
     endpoint: "POST /api/weather",
-    icon: WeatherIcon,
+    shape: "segmented",
     panel: () => <WeatherPanel />,
   },
   {
     id: "python",
     name: "Python copilot",
     tagline: "Chat model",
-    title: "Chat model",
+    title: "One request, one finished answer",
     description:
-      "No tools and no agent loop. One request in, one complete answer out.",
+      "No tools and no agent loop. Nothing is visible until everything is: the model writes the whole reply before a single word reaches the browser.",
     endpoint: "POST /api/copilot/python",
-    icon: ChatIcon,
+    shape: "block",
     panel: () => <PythonPanel />,
   },
   {
     id: "streaming",
     name: "Programming copilot",
     tagline: "Streaming",
-    title: "Streaming chat model",
+    title: "The answer arrives as it is written",
     description:
-      "The same model, sent token by token as it is produced instead of all at once.",
+      "The same model, sent token by token over server-sent events. You read the first sentence while the model is still composing the last.",
     endpoint: "POST /api/copilot/programming/stream",
-    icon: StreamIcon,
+    shape: "filling",
     panel: () => <StreamingPanel />,
   },
 ];
@@ -63,83 +64,78 @@ export default function Home() {
   const active = AGENTS.find((agent) => agent.id === activeId) ?? AGENTS[0];
 
   return (
-    <div className="flex min-h-full flex-col lg:flex-row">
-      <aside className="flex shrink-0 flex-col gap-8 border-b border-border-subtle bg-surface px-6 py-6 lg:h-screen lg:w-[280px] lg:border-r lg:border-b-0 lg:px-5 lg:py-7">
-        <div className="flex items-center gap-3">
-          <LogoMark className="text-accent" />
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold tracking-tight text-text">
+    <div className="min-h-full">
+      <header className="border-b border-border-subtle bg-surface">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-x-8 gap-y-4 px-6 pt-8 pb-6 lg:px-10">
+          <div>
+            <h1 className="font-display text-2xl leading-none font-semibold tracking-[-0.02em] text-text">
               LangChain Playground
+            </h1>
+            <p className="mt-3 max-w-md text-base text-text-muted">
+              Three ways to put a language model behind an API, and the thing
+              that actually separates them: when the answer shows up.
             </p>
-            <p className="truncate text-xs text-text-faint">Three agent patterns</p>
+          </div>
+          <div className="flex items-center gap-5">
+            <HealthIndicator />
+            <ThemeToggle />
           </div>
         </div>
+      </header>
 
-        <nav aria-label="Agents" className="flex flex-col gap-1">
+      <nav
+        aria-label="Patterns"
+        className="border-b border-border-subtle bg-surface"
+      >
+        <ul className="mx-auto flex max-w-5xl flex-col sm:flex-row px-6 lg:px-10">
           {AGENTS.map((agent) => {
-            const Icon = agent.icon;
             const selected = agent.id === activeId;
             return (
-              <button
-                key={agent.id}
-                onClick={() => setActiveId(agent.id)}
-                aria-current={selected ? "page" : undefined}
-                className={cx(
-                  "group flex items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150",
-                  selected ? "bg-accent-tint" : "hover:bg-surface-subtle",
-                )}
-              >
-                <Icon
+              <li key={agent.id} className="flex-1">
+                <button
+                  onClick={() => setActiveId(agent.id)}
+                  aria-current={selected ? "page" : undefined}
                   className={cx(
-                    "mt-0.5",
+                    "group w-full border-b-2 py-4 text-left transition-colors duration-150 sm:pr-6",
                     selected
-                      ? "text-accent"
-                      : "text-text-faint group-hover:text-text-muted",
+                      ? "border-accent"
+                      : "border-transparent hover:border-border-strong",
                   )}
-                />
-                <span className="min-w-0">
+                >
+                  <ArrivalGlyph shape={agent.shape} active={selected} />
                   <span
                     className={cx(
-                      "block text-base font-medium",
-                      selected ? "text-accent" : "text-text",
+                      "mt-2.5 block font-display text-lg font-semibold tracking-[-0.01em]",
+                      selected ? "text-text" : "text-text-muted",
                     )}
                   >
                     {agent.name}
                   </span>
-                  <span className="mt-0.5 block text-xs text-text-faint">
+                  <span className="mt-0.5 block font-mono text-xs uppercase tracking-[0.14em] text-text-faint">
                     {agent.tagline}
                   </span>
-                </span>
-              </button>
+                </button>
+              </li>
             );
           })}
-        </nav>
+        </ul>
+      </nav>
 
-        {/* Extra bottom padding on large screens keeps this clear of the
-            Next.js dev-tools badge pinned to the corner. */}
-        <div className="mt-auto flex flex-col gap-4 lg:pb-9">
-          <HealthIndicator />
-          <ThemeToggle />
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-6 py-10 lg:px-12 lg:py-14">
-          <header className="mb-8">
-            <span className="inline-flex items-center rounded-full border border-border-subtle px-2.5 py-1 font-mono text-xs text-text-muted">
-              {active.endpoint}
-            </span>
-            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-text">
+      <main className="mx-auto max-w-5xl px-6 py-12 lg:px-10">
+        <div key={active.id} className="fade-rise">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-xl font-semibold tracking-[-0.015em] text-text">
               {active.title}
-            </h1>
-            <p className="mt-2.5 max-w-xl text-base leading-relaxed text-text-muted">
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-text-muted">
               {active.description}
             </p>
-          </header>
-
-          <div key={active.id} className="fade-rise">
-            {active.panel()}
+            <p className="mt-5 font-mono text-xs tracking-wide text-text-faint">
+              {active.endpoint}
+            </p>
           </div>
+
+          <div className="mt-10">{active.panel()}</div>
         </div>
       </main>
     </div>

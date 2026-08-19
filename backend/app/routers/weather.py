@@ -1,13 +1,13 @@
 from fastapi import APIRouter
 
 from app.agents.weather import ask_weather_agent
-from app.schemas import WeatherRequest, WeatherResponse
+from app.schemas import WeatherReply, WeatherRequest
 
 router = APIRouter(prefix='/api/weather', tags=['weather'])
 
 
-@router.post('', response_model=WeatherResponse)
-async def get_weather(request: WeatherRequest) -> WeatherResponse:
+@router.post('', response_model=WeatherReply)
+async def get_weather(request: WeatherRequest) -> WeatherReply:
     """Look up the user's city from their id, then report its weather.
 
     The city is never sent by the caller -- the agent calls locate_user to find

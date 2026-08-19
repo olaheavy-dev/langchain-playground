@@ -1,9 +1,15 @@
 @import "tailwindcss";
 
 /*
-  Colours are semantic CSS variables rather than Tailwind `dark:` variants, so
-  switching theme is a single swap of values and every component stays
-  theme-agnostic.
+  Direction: instrument record.
+
+  The three patterns differ in one thing -- how their output arrives in time --
+  so the interface is built as a record of arrival rather than as a dashboard.
+  Petrol ink on paper, a gold signal colour reserved for work happening right
+  now, and a trace rail under every answer showing how that answer came back.
+
+  Colours are semantic CSS variables rather than Tailwind `dark:` variants, so a
+  theme change is one swap of values and every component stays theme-agnostic.
 
   Light is defined on bare :root. Dark is redefined twice: once for the system
   preference (guarded so an explicit light choice still wins) and once for an
@@ -12,80 +18,86 @@
   Contrast, measured rather than eyeballed (WCAG 2.1 AA), against --surface:
 
                light   dark
-    --text     17.6    16.7
-    --text-muted 6.8    7.6
-    --text-faint 5.1    5.3    <- 12px label text, so it needs 4.5:1, not 3:1
-    --accent     6.3    4.9
-    --border-interactive 3.3   3.2   <- the sole boundary of an input
+    --text     15.7    14.6
+    --text-muted 6.8    7.8
+    --text-faint 5.5    5.4    <- 12px label text, so 4.5:1, not 3:1
+    --accent     7.7    8.2
+    --signal     5.1    8.6
+    --border-interactive 3.2   3.5   <- the sole boundary of a control
 
   Re-measure if you change a hue. --border-subtle and --border-strong are
   decorative and deliberately below 3:1.
 */
 :root {
-  --canvas: #fbfaf9;
-  --surface: #ffffff;
-  --surface-subtle: #f5f4f2;
-  --border-subtle: #e8e5e1;
-  --border-strong: #d7d3cd;
-  /* The only boundary a control has, so it clears 3:1 where the others need not */
-  --border-interactive: #948d84;
-  --text: #1a1917;
-  --text-muted: #5f5a54;
-  --text-faint: #736e67;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-contrast: #ffffff;
-  --accent-tint: #eef2ff;
-  --positive: #0f766e;
-  --negative: #b91c1c;
-  --shadow-card: 0 1px 2px rgb(23 23 23 / 0.04), 0 4px 16px rgb(23 23 23 / 0.05);
+  --canvas: #efeee8;
+  --surface: #faf9f5;
+  --surface-subtle: #e9e7df;
+  --border-subtle: #dcd9cf;
+  --border-strong: #c6c2b4;
+  --border-interactive: #8f8b7c;
+  --text: #14211e;
+  --text-muted: #4e5b56;
+  --text-faint: #5c6862;
+  --accent: #0e5a52;
+  --accent-hover: #0a4741;
+  --accent-contrast: #faf9f5;
+  --accent-tint: #dde8e4;
+  /* Reserved for work happening right now: the live stream, the running tool
+     call. Never decorative -- if it is gold, something is in motion. */
+  --signal: #9c5a18;
+  --signal-tint: #f0e4d4;
+  --positive: #0e5a52;
+  --negative: #a4301f;
+  --shadow-card: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #0b0b0c;
-    --surface: #141416;
-    --surface-subtle: #1a1a1d;
-    --border-subtle: #26262a;
-    --border-strong: #35353b;
-    --border-interactive: #66666f;
-    --text: #f5f4f2;
-    --text-muted: #a8a6a1;
-    --text-faint: #8b8983;
-    --accent: #7c74f0;
-    --accent-hover: #8b84f5;
-    --accent-contrast: #0b0b0c;
-    --accent-tint: #1b1a2e;
-    --positive: #2dd4bf;
-    --negative: #f87171;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.24);
+    --canvas: #0e1413;
+    --surface: #141b1a;
+    --surface-subtle: #1b2422;
+    --border-subtle: #263130;
+    --border-strong: #35423f;
+    --border-interactive: #63736f;
+    --text: #edebe3;
+    --text-muted: #a6b0ab;
+    --text-faint: #85928c;
+    --accent: #5fc2b0;
+    --accent-hover: #7ed3c3;
+    --accent-contrast: #0e1413;
+    --accent-tint: #16302c;
+    --signal: #e0ae5c;
+    --signal-tint: #2a2015;
+    --positive: #5fc2b0;
+    --negative: #f0857a;
+    --shadow-card: none;
   }
 }
 
 :root[data-theme="dark"] {
-  --canvas: #0b0b0c;
-  --surface: #141416;
-  --surface-subtle: #1a1a1d;
-  --border-subtle: #26262a;
-  --border-strong: #35353b;
-  --border-interactive: #66666f;
-  --text: #f5f4f2;
-  --text-muted: #a8a6a1;
-  --text-faint: #8b8983;
-  --accent: #7c74f0;
-  --accent-hover: #8b84f5;
-  --accent-contrast: #0b0b0c;
-  --accent-tint: #1b1a2e;
-  --positive: #2dd4bf;
-  --negative: #f87171;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.24);
+  --canvas: #0e1413;
+  --surface: #141b1a;
+  --surface-subtle: #1b2422;
+  --border-subtle: #263130;
+  --border-strong: #35423f;
+  --border-interactive: #63736f;
+  --text: #edebe3;
+  --text-muted: #a6b0ab;
+  --text-faint: #85928c;
+  --accent: #5fc2b0;
+  --accent-hover: #7ed3c3;
+  --accent-contrast: #0e1413;
+  --accent-tint: #16302c;
+  --signal: #e0ae5c;
+  --signal-tint: #2a2015;
+  --positive: #5fc2b0;
+  --negative: #f0857a;
+  --shadow-card: none;
 }
 
 /*
   Type and radius scales, defined once so a size is chosen from a list rather
-  than typed as an arbitrary value. Before this there were eight font sizes
-  (11, 12, 13, 14, 15, 16, 24, 30) and five radii, several of them one-offs
-  written inline -- the drift you get from nudging until it looks right.
+  than typed as an arbitrary value.
 
   Six steps, each with a job:
     xs   labels, captions, taglines, hints
@@ -104,16 +116,16 @@
   --text-base--line-height: 1.65;
   --text-lg: 1.0625rem;    /* 17px */
   --text-lg--line-height: 1.4;
-  --text-xl: 1.5rem;       /* 24px */
-  --text-xl--line-height: 1.2;
-  --text-2xl: 1.875rem;    /* 30px */
-  --text-2xl--line-height: 1.15;
+  --text-xl: 1.75rem;      /* 28px */
+  --text-xl--line-height: 1.1;
+  --text-2xl: 2.75rem;     /* 44px */
+  --text-2xl--line-height: 1.02;
 
   /* Three radii, applied by element type: inline marks, controls, cards.
-     rounded-full stays for dots and pills -- a shape, not a fourth step. */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+     Tighter than before -- a record is squared off, not pill-shaped. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
 }
 
 @theme inline {
@@ -130,13 +142,14 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-contrast: var(--accent-contrast);
   --color-accent-tint: var(--accent-tint);
+  --color-signal: var(--signal);
+  --color-signal-tint: var(--signal-tint);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
-  --shadow-card: var(--shadow-card);
+  --font-display: var(--font-bricolage);
+  --font-sans: var(--font-instrument);
+  --font-mono: var(--font-spline-mono);
 }
 
 body {
@@ -147,9 +160,16 @@ body {
   font-size: var(--text-base);
 }
 
-/* One focus ring, applied consistently to every interactive element. Full accent
-   rather than a tinted one: at 35% alpha this composited to 1.76:1, well under
-   the 3:1 a focus indicator needs to be findable. */
+/* Structure is drawn with rules rather than shadows -- a record is printed, not
+   floated. Surfaces are separated by a single hairline and never by both a
+   border and a shadow. */
+.rule-top {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* One focus ring, applied consistently to every interactive element. Full
+   accent rather than a tinted one: at 35% alpha this composited to 1.76:1, well
+   under the 3:1 a focus indicator needs to be findable. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -174,9 +194,21 @@ body {
   animation: fade-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* The trace rail drawing itself in as a result lands. */
+@keyframes trace-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.trace-draw {
+  transform-origin: left;
+  animation: trace-draw 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .caret-blink,
-  .fade-rise {
+  .fade-rise,
+  .trace-draw {
     animation: none;
   }
 }

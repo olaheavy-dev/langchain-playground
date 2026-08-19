@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiError, streamProgrammingCopilot } from "@/lib/api";
 import { Markdown } from "./Markdown";
+import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
 
 const SUGGESTIONS = [
@@ -17,6 +18,7 @@ export function StreamingPanel() {
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
+  const [trace, setTrace] = useState<TraceSegment[] | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Abandon an in-flight stream if the panel goes away mid-answer.
@@ -30,9 +32,24 @@ export function StreamingPanel() {
     setStreaming(true);
     setError(null);
     setAnswer("");
+    setTrace(null);
+    const startedAt = performance.now();
+    let firstTokenAt: number | null = null;
     try {
       for await (const token of streamProgrammingCopilot(question, controller.signal)) {
+        if (firstTokenAt === null) {
+          // The number that matters for a stream: how long the reader waited
+          // before anything at all appeared.
+          firstTokenAt = performance.now();
+          setTrace([{ label: "to first token", ms: firstTokenAt - startedAt }]);
+        }
         setAnswer((current) => current + token);
+      }
+      if (firstTokenAt !== null) {
+        setTrace([
+          { label: "to first token", ms: firstTokenAt - startedAt },
+          { label: "reading while it writes", ms: performance.now() - firstTokenAt },
+        ]);
       }
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
@@ -73,7 +90,7 @@ export function StreamingPanel() {
             <button
               key={suggestion}
               onClick={() => setQuestion(suggestion)}
-              className="rounded-full border border-border-subtle px-3 py-1.5 text-xs text-text-muted transition-colors duration-150 hover:border-border-strong hover:text-text"
+              className="rounded-sm border border-border-subtle px-2.5 py-1.5 text-xs text-text-muted transition-colors duration-150 hover:border-text-muted hover:text-text"
             >
               {suggestion}
             </button>
@@ -104,8 +121,8 @@ export function StreamingPanel() {
           <div className="flex items-center justify-between">
             <Label>Answer</Label>
             {streaming && (
-              <span className="flex items-center gap-1.5 text-xs text-text-muted">
-                <span className="size-1.5 rounded-full bg-accent caret-blink" />
+              <span className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.14em] text-signal">
+                <span className="size-1.5 rounded-sm bg-signal caret-blink" />
                 receiving
               </span>
             )}
@@ -113,7 +130,7 @@ export function StreamingPanel() {
           <div aria-live="polite" className="mt-2.5">
             <Markdown>{answer}</Markdown>
             {streaming && (
-              <span className="caret-blink -mt-1 inline-block h-[1.1em] w-[2px] translate-y-[0.15em] bg-accent" />
+              <span className="caret-blink -mt-1 inline-block h-[1.1em] w-[2px] translate-y-[0.15em] bg-signal" />
             )}
           </div>
           {!streaming && answer && (
@@ -121,6 +138,7 @@ export function StreamingPanel() {
               Arrived token by token over server-sent events.
             </p>
           )}
+          {trace && <Trace segments={trace} live={streaming} />}
         </Card>
       )}
     </div>

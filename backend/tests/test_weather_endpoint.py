@@ -10,13 +10,18 @@ import httpx
 import pytest
 
 from app.routers import weather as weather_router
-from app.schemas import WeatherResponse
+from app.schemas import TraceSegment, WeatherReply, WeatherResponse
 
-LOCATED = WeatherResponse(
+LOCATED = WeatherReply(
     summary='Vienna is a brisk 17 degrees.',
     temperature_celsius=17.0,
     temperature_fahrenheit=63.0,
     humidity=84.0,
+    trace=[
+        TraceSegment(label='locate_user', ms=0.4),
+        TraceSegment(label='get_weather', ms=812.0),
+        TraceSegment(label='model', ms=1440.0),
+    ],
 )
 
 
@@ -24,7 +29,7 @@ LOCATED = WeatherResponse(
 def captured_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
     calls: list[dict[str, str]] = []
 
-    async def fake_agent(user_id: str, thread_id: str) -> WeatherResponse:
+    async def fake_agent(user_id: str, thread_id: str) -> WeatherReply:
         calls.append({'user_id': user_id, 'thread_id': thread_id})
         return LOCATED
 
@@ -45,6 +50,11 @@ async def test_returns_the_agents_reading(
         'temperature_celsius': 17.0,
         'temperature_fahrenheit': 63.0,
         'humidity': 84.0,
+        'trace': [
+            {'label': 'locate_user', 'ms': 0.4},
+            {'label': 'get_weather', 'ms': 812.0},
+            {'label': 'model', 'ms': 1440.0},
+        ],
     }
 
 
@@ -68,8 +78,8 @@ async def test_unknown_user_yields_nulls_not_zeros(
     """The regression this schema exists to prevent: a reading of 0.0 would look
     like a real measurement of a freezing city."""
 
-    async def fake_agent(user_id: str, thread_id: str) -> WeatherResponse:
-        return WeatherResponse(summary='I could not work out where you are.')
+    async def fake_agent(user_id: str, thread_id: str) -> WeatherReply:
+        return WeatherReply(summary='I could not work out where you are.')
 
     monkeypatch.setattr(weather_router, 'ask_weather_agent', fake_agent)
 

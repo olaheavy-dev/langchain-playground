@@ -18,6 +18,11 @@ const LOCATED = {
   temperature_celsius: 17,
   temperature_fahrenheit: 63,
   humidity: 84,
+  trace: [
+    { label: "locate_user", ms: 0.4 },
+    { label: "get_weather", ms: 812 },
+    { label: "model", ms: 1440 },
+  ],
 };
 
 const UNLOCATED = {
@@ -25,6 +30,7 @@ const UNLOCATED = {
   temperature_celsius: null,
   temperature_fahrenheit: null,
   humidity: null,
+  trace: [{ label: "model", ms: 900 }],
 };
 
 beforeEach(() => {
@@ -78,6 +84,20 @@ describe("WeatherPanel", () => {
     expect(screen.getAllByText("—")).toHaveLength(3);
     expect(screen.queryByText("0")).not.toBeInTheDocument();
     expect(screen.getByText(/could not place this user/i)).toBeInTheDocument();
+  });
+
+  it("draws the trace from the server's measurements, not from guesses", async () => {
+    mockFetchWeather.mockResolvedValue(LOCATED);
+    render(<WeatherPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: /get the weather/i }));
+
+    // Asserted through the rail's accessible label, which is both the
+    // screen-reader view and the whole trace in one string: each duration is
+    // the one the server reported, not a share of some total.
+    const rail = await screen.findByRole("img", { name: /arrival trace/i });
+    expect(rail).toHaveAccessibleName(/get_weather, 812ms/);
+    expect(rail).toHaveAccessibleName(/model, 1\.4s/);
   });
 
   it("reports a failure instead of leaving the spinner running", async () => {

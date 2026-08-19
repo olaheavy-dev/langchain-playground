@@ -14,12 +14,12 @@ const components: Components = {
     <p className="mb-3 text-base leading-relaxed text-text last:mb-0">{children}</p>
   ),
   h1: ({ children }) => (
-    <h3 className="mt-5 mb-2 text-lg font-semibold tracking-tight text-text first:mt-0">
+    <h3 className="mt-6 mb-2 font-display text-lg font-semibold tracking-[-0.01em] text-text first:mt-0">
       {children}
     </h3>
   ),
   h2: ({ children }) => (
-    <h3 className="mt-5 mb-2 text-lg font-semibold tracking-tight text-text first:mt-0">
+    <h3 className="mt-6 mb-2 font-display text-lg font-semibold tracking-[-0.01em] text-text first:mt-0">
       {children}
     </h3>
   ),
@@ -27,12 +27,12 @@ const components: Components = {
   // people actually see -- it takes the same step as the levels above it, or the
   // only heading in an answer would be the same size as the body text.
   h3: ({ children }) => (
-    <h4 className="mt-5 mb-2 text-lg font-semibold tracking-tight text-text first:mt-0">
+    <h4 className="mt-6 mb-2 font-display text-lg font-semibold tracking-[-0.01em] text-text first:mt-0">
       {children}
     </h4>
   ),
   ul: ({ children }) => (
-    <ul className="mb-3 ml-1 space-y-1.5 last:mb-0">{children}</ul>
+    <ul className="mb-3 ml-1 list-disc space-y-1.5 pl-4 last:mb-0">{children}</ul>
   ),
   ol: ({ children }) => (
     <ol className="mb-3 ml-1 list-decimal space-y-1.5 pl-4 last:mb-0">{children}</ol>

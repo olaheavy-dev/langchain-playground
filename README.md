@@ -102,7 +102,12 @@ curl -X POST http://127.0.0.1:8000/api/weather \
   "summary": "In Vienna, it's currently 27°C (80°F) with patchy rain nearby. Humidity is at 45%...",
   "temperature_celsius": 27.0,
   "temperature_fahrenheit": 80.0,
-  "humidity": 45.0
+  "humidity": 45.0,
+  "trace": [
+    { "label": "locate_user", "ms": 0.003 },
+    { "label": "get_weather", "ms": 180.4 },
+    { "label": "model", "ms": 3781.2 }
+  ]
 }
 ```
 
@@ -110,6 +115,11 @@ Known users are `ABC123` (Vienna), `XYZ456` (London) and `HJKL111` (Paris). Any 
 resolves to `Unknown`, and the agent says so rather than guessing — the three numeric
 fields come back `null`, so callers must handle the case instead of reading a fabricated
 `0.0`.
+
+`trace` is measured, not estimated: each tool call is timed where it runs, and the model's
+share is whatever the total is once those are subtracted. The interface draws it as a rail
+under the answer, which is how the three patterns become comparable — the agent's time is
+mostly the model thinking, while a stream's is a short wait and then a long read.
 
 `thread_id` identifies the conversation and `user_id` the person; they are deliberately
 separate, so one user can hold several independent conversations.
@@ -258,6 +268,23 @@ but does not export values into `os.environ`, where LangChain would otherwise lo
 failure mode worth knowing about, since the resulting error points at credentials rather
 than at configuration.
 
+### Designing for the subject rather than the template
+
+The three patterns differ in exactly one thing — when their output arrives — so the
+interface is built as a record of arrival rather than as a dashboard. Petrol ink on paper,
+a gold reserved strictly for work happening right now, structure drawn with rules instead
+of shadows, and a display face that is not the one every framework ships with.
+
+The signature is the **arrival trace** under each answer: several segments for the agent
+because it made several round trips, one solid block for the chat model because nothing was
+visible until everything was, and a rail that fills live while tokens land. Same rail, three
+shapes, which is the comparison the whole project exists to make.
+
+Building it also caught a real bug. With per-tool timings on screen it became obvious that
+the agent sometimes answered without calling `get_weather` at all — reporting a temperature
+from the model's own head. The system prompt now forbids that, and the trace is where it
+would show up again.
+
 ### Theming without variant sprawl
 
 Frontend colours are semantic CSS variables (`--surface`, `--text-muted`) rather than
@@ -276,6 +303,9 @@ Deliberate scope boundaries rather than oversights:
   interface is identical, so it is a one-line swap.
 - **No authentication.** `user_id` arrives in the request body. Real deployment would take
   it from a verified session, not from the client.
+- **The model's share of the trace is derived, not timed.** There is no point in the agent
+  loop where only the model is running that can be wrapped, so its segment is the total
+  minus the measured tool calls. Everything else in the trace is measured directly.
 - **No end-to-end test.** The suite covers each side of the boundary but never runs the
   two together against a live model, so a schema change that breaks the contract would
   pass both halves. A Playwright run against a recorded backend would close that gap.

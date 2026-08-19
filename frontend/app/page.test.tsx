@@ -14,11 +14,19 @@ vi.mock("@/lib/api", async (importOriginal) => ({
 }));
 
 describe("Home", () => {
-  it("opens on the tool-calling agent", () => {
+  it("has one h1, and it names the page rather than the panel", () => {
+    render(<Home />);
+
+    const headings = screen.getAllByRole("heading", { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent("LangChain Playground");
+  });
+
+  it("opens on the tool-calling pattern", () => {
     render(<Home />);
 
     expect(
-      screen.getByRole("heading", { name: "Tool-calling agent", level: 1 }),
+      screen.getByRole("heading", { name: /the model calls your functions/i, level: 2 }),
     ).toBeInTheDocument();
     expect(screen.getByText("POST /api/weather")).toBeInTheDocument();
   });
@@ -29,7 +37,7 @@ describe("Home", () => {
     await userEvent.click(screen.getByRole("button", { name: /programming copilot/i }));
 
     expect(
-      screen.getByRole("heading", { name: "Streaming chat model", level: 1 }),
+      screen.getByRole("heading", { name: /the answer arrives as it is written/i, level: 2 }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("POST /api/copilot/programming/stream"),
@@ -38,7 +46,7 @@ describe("Home", () => {
     expect(screen.queryByRole("radio", { name: /ABC123/ })).not.toBeInTheDocument();
   });
 
-  it("marks the selected agent for assistive technology", async () => {
+  it("marks the selected pattern for assistive technology", async () => {
     render(<Home />);
 
     await userEvent.click(screen.getByRole("button", { name: /python copilot/i }));

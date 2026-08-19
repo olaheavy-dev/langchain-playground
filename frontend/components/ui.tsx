@@ -22,13 +22,14 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5",
-        "text-base font-medium transition-colors duration-150",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5",
+        "font-mono text-xs font-medium uppercase tracking-[0.12em]",
+        "transition-colors duration-150",
         "disabled:cursor-not-allowed disabled:opacity-45",
         variant === "primary" &&
           "bg-accent text-accent-contrast hover:bg-accent-hover",
         variant === "ghost" &&
-          "border border-border-strong text-text hover:bg-surface-subtle",
+          "border border-border-interactive text-text hover:bg-surface-subtle",
         className,
       )}
     >
@@ -41,7 +42,7 @@ export function Button({
 export function Spinner({ className }: { className?: string }) {
   return (
     <svg
-      className={cx("size-4 animate-spin", className)}
+      className={cx("size-3.5 animate-spin", className)}
       viewBox="0 0 16 16"
       fill="none"
       aria-hidden="true"
@@ -57,6 +58,11 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
+/**
+ * A panel is a printed section, not a floating card: one hairline rule and a
+ * flat surface. Borders or shadows, never both -- the pair was the noisiest
+ * thing in the old interface.
+ */
 export function Card({
   children,
   className,
@@ -67,7 +73,7 @@ export function Card({
   return (
     <div
       className={cx(
-        "rounded-lg border border-border-subtle bg-surface shadow-card",
+        "rounded-lg border border-border-subtle bg-surface",
         className,
       )}
     >
@@ -89,16 +95,17 @@ export function Textarea({
         "w-full resize-none rounded-md border border-border-interactive bg-surface",
         "px-4 py-3 text-base leading-relaxed text-text",
         "placeholder:text-text-faint",
-        "transition-colors duration-150 hover:border-border-strong",
+        "transition-colors duration-150 hover:border-text-muted",
         className,
       )}
     />
   );
 }
 
+/** Section labels are set as small caps in mono -- the vernacular of a record. */
 export function Label({ children }: { children: ReactNode }) {
   return (
-    <span className="text-xs font-medium uppercase tracking-[0.08em] text-text-faint">
+    <span className="font-mono text-xs uppercase tracking-[0.14em] text-text-faint">
       {children}
     </span>
   );
@@ -110,7 +117,7 @@ export function ErrorNote({ message }: { message: string }) {
       role="alert"
       className="fade-rise flex items-start gap-2 text-base text-negative"
     >
-      <svg viewBox="0 0 16 16" className="mt-0.5 size-4 shrink-0" fill="currentColor" aria-hidden="true">
+      <svg viewBox="0 0 16 16" className="mt-1 size-3.5 shrink-0" fill="currentColor" aria-hidden="true">
         <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM7.25 4.5h1.5v5h-1.5v-5Zm0 6.25h1.5v1.5h-1.5v-1.5Z" />
       </svg>
       {message}

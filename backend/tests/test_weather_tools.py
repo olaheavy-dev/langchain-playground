@@ -83,3 +83,43 @@ def test_the_model_chooses_only_the_city() -> None:
 
     assert list(schema['properties']) == ['city']
     assert schema['required'] == ['city']
+
+
+async def test_tool_timings_are_recorded_while_a_tool_runs(mock_wttr) -> None:
+    """The trace the API returns has to be measured, not assembled from
+    plausible-looking proportions -- the same standard the nullable readings
+    hold the model to."""
+    import asyncio
+
+    from app.agents.weather import _tool_timings
+
+    async def slow_handler(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0.05)
+        return httpx.Response(200, json=CONDITIONS)
+
+    mock_wttr(slow_handler)
+    _tool_timings.set([])
+
+    await get_weather.ainvoke({'city': 'Vienna'})
+
+    recorded = _tool_timings.get()
+    assert [segment.label for segment in recorded] == ['get_weather']
+    # The handler sleeps 50ms, so anything much below that is not a measurement.
+    assert recorded[0].ms >= 45
+
+
+async def test_a_failed_tool_is_still_timed(mock_wttr) -> None:
+    """Otherwise a slow failure would vanish from the trace and the model's
+    share would silently absorb it."""
+    from app.agents.weather import _tool_timings
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, text='service unavailable')
+
+    mock_wttr(handler)
+    _tool_timings.set([])
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await get_weather.ainvoke({'city': 'Vienna'})
+
+    assert [segment.label for segment in _tool_timings.get()] == ['get_weather']

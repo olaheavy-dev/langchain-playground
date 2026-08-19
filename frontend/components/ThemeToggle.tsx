@@ -49,7 +49,7 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Colour theme"
-      className="flex items-center gap-0.5 rounded-md border border-border-subtle p-0.5"
+      className="flex items-center gap-1"
     >
       {(["light", "dark"] as const).map((option) => (
         <button
@@ -61,10 +61,10 @@ export function ThemeToggle() {
           className={cx(
             // min-h-11 is the 44px touch minimum, stated outright rather than
             // derived from padding -- py-1.5 previously left the target at 28px.
-            "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-sm px-2.5 py-2",
-            "text-xs font-medium capitalize transition-colors duration-150",
+            "flex min-h-11 items-center justify-center gap-1.5 rounded-sm px-2",
+            "font-mono text-xs uppercase tracking-[0.14em] transition-colors duration-150",
             theme === option
-              ? "bg-surface-subtle text-text"
+              ? "text-text underline decoration-accent decoration-2 underline-offset-4"
               : "text-text-faint hover:text-text-muted",
           )}
         >

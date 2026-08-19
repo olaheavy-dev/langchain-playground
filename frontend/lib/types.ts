@@ -5,12 +5,20 @@ export interface WeatherRequest {
   thread_id: string;
 }
 
+/** One measured stretch of work the server did while producing a reply. */
+export interface TraceSegment {
+  label: string;
+  ms: number;
+}
+
 export interface WeatherResponse {
   summary: string;
   /** null when the agent could not determine the user's location. */
   temperature_celsius: number | null;
   temperature_fahrenheit: number | null;
   humidity: number | null;
+  /** Measured on the server: each tool call, then the model's share. */
+  trace: TraceSegment[];
 }
 
 export interface AskRequest {

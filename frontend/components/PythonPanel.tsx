@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiError, askPythonCopilot } from "@/lib/api";
 import { Markdown } from "./Markdown";
+import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
 
 const SUGGESTIONS = [
@@ -17,6 +18,7 @@ export function PythonPanel() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [trace, setTrace] = useState<TraceSegment[] | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Abandon an unanswered question if the panel goes away.
@@ -30,9 +32,14 @@ export function PythonPanel() {
     setLoading(true);
     setError(null);
     setAnswer(null);
+    setTrace(null);
+    const startedAt = performance.now();
     try {
       const result = await askPythonCopilot(question, controller.signal);
       setAnswer(result.answer);
+      // One segment, because there is only one: the whole answer was written
+      // before any of it was sent.
+      setTrace([{ label: "silence, then the whole answer", ms: performance.now() - startedAt }]);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(
@@ -67,7 +74,7 @@ export function PythonPanel() {
             <button
               key={suggestion}
               onClick={() => setQuestion(suggestion)}
-              className="rounded-full border border-border-subtle px-3 py-1.5 text-xs text-text-muted transition-colors duration-150 hover:border-border-strong hover:text-text"
+              className="rounded-sm border border-border-subtle px-2.5 py-1.5 text-xs text-text-muted transition-colors duration-150 hover:border-text-muted hover:text-text"
             >
               {suggestion}
             </button>
@@ -95,6 +102,7 @@ export function PythonPanel() {
           <p className="mt-5 border-t border-border-subtle pt-4 text-xs text-text-faint">
             Delivered in one piece — the model finished before anything was sent.
           </p>
+          {trace && <Trace segments={trace} />}
         </Card>
       )}
     </div>

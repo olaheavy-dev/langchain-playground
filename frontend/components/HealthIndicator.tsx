@@ -33,13 +33,13 @@ export function HealthIndicator() {
     <div className="flex items-center gap-2" title={API_URL}>
       <span
         className={cx(
-          "size-1.5 rounded-full",
+          "size-1.5 rounded-sm",
           online === null && "bg-text-faint",
-          online === true && "bg-positive",
+          online === true && "bg-accent",
           online === false && "bg-negative",
         )}
       />
-      <span className="text-xs text-text-faint">{label}</span>
+      <span className="font-mono text-xs uppercase tracking-[0.14em] text-text-faint">{label}</span>
     </div>
   );
 }
