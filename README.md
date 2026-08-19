@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/olaheavy-dev/langchain-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/olaheavy-dev/langchain-playground/actions/workflows/ci.yml)
 
-A full-stack reference implementation of three distinct LLM integration patterns, built to
+A full-stack reference implementation of four distinct LLM integration patterns, built to
 make the differences between them visible and comparable side by side.
 
 **Stack:** FastAPI · LangChain · LangGraph · Python 3.13 · Next.js 16 · React 19 ·
@@ -14,6 +14,7 @@ TypeScript · Tailwind CSS v4 · pytest · Vitest
 | --- | --- | --- | --- |
 | Tool-calling agent | `app/agents/weather.py` | several segments | The model decides when to call your own functions, and fills a typed response |
 | Chat model | `app/agents/python_copilot.py` | one block | One request, one complete answer |
+| Agentic retrieval | `app/agents/rag.py` | searches, then generation | The model decides whether to search a knowledge base, and may search twice |
 | Streaming chat model | `app/agents/streaming_copilot.py` | a filling rail | The same answer, sent token by token as it is produced |
 
 The interface is built around that third column. Each pattern is labelled in the sidebar by
@@ -50,7 +51,29 @@ No tools, no agent loop. A seeded system/human/AI exchange steers tone and depth
 
 One segment, because there is only one: nothing was visible until everything was.
 
-### 3. Streaming chat model
+### 3. Agentic retrieval
+
+The knowledge base is a **tool**, not a fixed retrieve-then-generate step, so the model
+decides whether a question needs searching at all — and may search more than once before
+answering. Ten short opinions about fruit and computers, embedded with
+`text-embedding-3-large` into an in-memory vector store.
+
+![Agentic retrieval](docs/images/06-knowledge-base.jpg)
+
+Every passage that came back is shown with its similarity score, grouped under the search
+that found it, so an answer can be checked against what was actually retrieved. The
+screenshot catches the interesting case: two searches, one for fruit and one for laptops,
+neither of which the caller asked for by name.
+
+The scores are worth reading. `I love Linux.` comes back at `0.244` for *laptops they like*
+— a weak hit the model correctly ignored. Retrieval is fuzzy, and showing the scores is
+what makes that visible rather than hidden behind a confident answer.
+
+Ask something outside the knowledge base and the model declines, `sources` comes back
+empty, and the interface says so plainly: an answer with nothing retrieved did not come
+from the knowledge base.
+
+### 4. Streaming chat model
 
 The same model driven by `astream`. Tokens are pushed to the browser over server-sent
 events and rendered as they arrive; the request can be cancelled mid-flight.
@@ -161,6 +184,33 @@ curl -X POST http://127.0.0.1:8000/api/copilot/python \
 { "answer": "Python was first released in 1991 by its creator Guido van Rossum." }
 ```
 
+### `POST /api/rag`
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/rag \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "What fruits do they hate, and what laptops do they like?", "thread_id": "t1"}'
+```
+
+```json
+{
+  "answer": "They hate mangos, bananas, and raspberries. They like Lenovo Thinkpads and MacBooks.",
+  "sources": [
+    { "text": "I despise mangos.", "score": 0.48, "query": "fruits they hate" },
+    { "text": "I like Lenovo Thinkpads.", "score": 0.559, "query": "laptops they like" }
+  ],
+  "trace": [
+    { "label": "kb_search", "ms": 753.0 },
+    { "label": "kb_search", "ms": 756.4 },
+    { "label": "model", "ms": 2210.8 }
+  ]
+}
+```
+
+An empty `sources` list is not an error: the model is allowed to decide a question needs no
+search, and the empty list is how a caller learns the answer did not come from the
+knowledge base.
+
 ### `POST /api/copilot/programming/stream`
 
 The same model, streamed as [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events).
@@ -184,14 +234,14 @@ separate one SSE message from the next.
 
 ## Tests
 
-75 tests, none of which call a model or the network. Both suites, plus lint, a typecheck
+102 tests, none of which call a model or the network. Both suites, plus lint, a typecheck
 and a production build, run on every push and pull request
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) -- no API key needed, because
 nothing in the suite reaches a model.
 
 ```bash
-cd backend  && uv run pytest      # 29 tests
-cd frontend && npm test           # 46 tests
+cd backend  && uv run pytest      # 43 tests
+cd frontend && npm test           # 59 tests
 ```
 
 **Backend** — `pytest` with `pytest-asyncio`, driving the app in-process through
@@ -229,11 +279,14 @@ backend/
 │   ├── schemas.py           # request/response models
 │   ├── agents/
 │   │   ├── base.py          # shared chat model factory
+│   │   ├── timing.py        # measures each step, for the arrival trace
+│   │   ├── rag.py
 │   │   ├── weather.py
 │   │   ├── python_copilot.py
 │   │   └── streaming_copilot.py
 │   └── routers/
 │       ├── weather.py
+│       ├── rag.py
 │       └── copilot.py
 └── tests/                   # pytest, driven in-process over ASGI
 
@@ -313,6 +366,22 @@ Building it also caught a real bug. With per-tool timings on screen it became ob
 the agent sometimes answered without calling `get_weather` at all — reporting a temperature
 from the model's own head. The system prompt now forbids that, and the trace is where it
 would show up again.
+
+### Retrieval as a tool, and a failing tool that answers
+
+The knowledge base is a tool the model may call rather than a step that always runs, which
+is what makes the interesting cases observable: a question answered without searching, and
+a question that needed two searches. Both are visible in the interface rather than inferred.
+
+`kb_search` returns its failure to the model instead of raising. A tool that raises never
+produces a tool message, so the checkpoint keeps an assistant turn with an unanswered tool
+call — and because that state is replayed on the next request, the thread stays broken for
+good. Found the hard way, when a missing numpy turned one failed search into an endpoint
+that returned 500 for every later question on that thread.
+
+`InMemoryVectorStore` rather than FAISS: for ten short strings an index buys nothing, and
+it avoids depending on `langchain-community`, which is being sunset. The interface is the
+same, so a real store is a one-line swap.
 
 ### Theming without variant sprawl
 

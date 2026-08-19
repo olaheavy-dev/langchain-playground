@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import copilot, weather
+from app.routers import copilot, rag, weather
 
 settings = get_settings()
 
@@ -22,6 +22,7 @@ app.add_middleware(
 
 app.include_router(weather.router)
 app.include_router(copilot.router)
+app.include_router(rag.router)
 
 
 @app.get('/health', tags=['health'])

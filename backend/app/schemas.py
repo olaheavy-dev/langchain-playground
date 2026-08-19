@@ -37,6 +37,27 @@ class WeatherReply(WeatherResponse):
     trace: list[TraceSegment] = []
 
 
+class Source(BaseModel):
+    """A passage the retriever returned, and how close it was to the query.
+
+    Surfaced so an answer can be checked against what was actually retrieved,
+    rather than taken on trust -- the retrieval equivalent of the nullable
+    weather readings.
+    """
+
+    text: str
+    score: float
+    query: str = Field(description='The search the model chose to run')
+
+
+class RagReply(BaseModel):
+    answer: str
+    # Empty when the model answered without searching, which is itself worth
+    # seeing: it means the answer came from the model, not the knowledge base.
+    sources: list[Source] = []
+    trace: list[TraceSegment] = []
+
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=1)
 

@@ -1,6 +1,8 @@
 import type {
   AskRequest,
   AskResponse,
+  RagReply,
+  RagRequest,
   WeatherRequest,
   WeatherResponse,
 } from "./types";
@@ -61,6 +63,18 @@ export function askPythonCopilot(
   return post<AskRequest, AskResponse>(
     "/api/copilot/python",
     { question },
+    signal,
+  );
+}
+
+export function askRagAgent(
+  question: string,
+  threadId: string,
+  signal?: AbortSignal,
+): Promise<RagReply> {
+  return post<RagRequest, RagReply>(
+    "/api/rag",
+    { question, thread_id: threadId },
     signal,
   );
 }

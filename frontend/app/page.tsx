@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { HealthIndicator } from "@/components/HealthIndicator";
 import { PythonPanel } from "@/components/PythonPanel";
+import { RagPanel } from "@/components/RagPanel";
 import { StreamingPanel } from "@/components/StreamingPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ArrivalGlyph } from "@/components/Trace";
@@ -19,7 +20,7 @@ interface Agent {
   description: string;
   endpoint: string;
   /** How this pattern's output arrives, which is the thing being compared. */
-  shape: "segmented" | "block" | "filling";
+  shape: "segmented" | "block" | "filling" | "searched";
   panel: () => ReactNode;
 }
 
@@ -45,6 +46,17 @@ const AGENTS: Agent[] = [
     endpoint: "POST /api/copilot/python",
     shape: "block",
     panel: () => <PythonPanel />,
+  },
+  {
+    id: "rag",
+    name: "Knowledge base",
+    tagline: "Retrieval",
+    title: "The model looks it up first",
+    description:
+      "The knowledge base is a tool rather than a fixed step, so the model decides whether a question needs searching at all — and may search twice before answering. Every passage it retrieved is shown with the answer.",
+    endpoint: "POST /api/rag",
+    shape: "searched",
+    panel: () => <RagPanel />,
   },
   {
     id: "streaming",

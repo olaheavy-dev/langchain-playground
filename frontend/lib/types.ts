@@ -1,4 +1,4 @@
-export type AgentId = "weather" | "python" | "streaming";
+export type AgentId = "weather" | "python" | "streaming" | "rag";
 
 export interface WeatherRequest {
   user_id: string;
@@ -18,6 +18,26 @@ export interface WeatherResponse {
   temperature_fahrenheit: number | null;
   humidity: number | null;
   /** Measured on the server: each tool call, then the model's share. */
+  trace: TraceSegment[];
+}
+
+/** A passage the retriever returned, and how close it was to the query. */
+export interface Source {
+  text: string;
+  score: number;
+  /** The search the model chose to run, so two searches stay distinguishable. */
+  query: string;
+}
+
+export interface RagRequest {
+  question: string;
+  thread_id: string;
+}
+
+export interface RagReply {
+  answer: string;
+  /** Empty when the model answered without searching at all. */
+  sources: Source[];
   trace: TraceSegment[];
 }
 

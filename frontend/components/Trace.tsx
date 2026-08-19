@@ -109,7 +109,7 @@ export function ArrivalGlyph({
   shape,
   active,
 }: {
-  shape: "segmented" | "block" | "filling";
+  shape: "segmented" | "block" | "filling" | "searched";
   active: boolean;
 }) {
   const tone = active ? "bg-accent" : "bg-border-strong";
@@ -122,6 +122,14 @@ export function ArrivalGlyph({
         <>
           <span className={cx("h-full w-1/6", tone)} />
           <span className={cx("h-full w-1/4", tone)} />
+          <span className={cx("h-full flex-1", tone)} />
+        </>
+      )}
+      {shape === "searched" && (
+        <>
+          {/* Two short searches, then the long stretch of generating. */}
+          <span className={cx("h-full w-[8%]", tone)} />
+          <span className={cx("h-full w-[8%]", tone)} />
           <span className={cx("h-full flex-1", tone)} />
         </>
       )}

@@ -1,7 +1,6 @@
 """Tool-calling agent: the model decides when to call our own functions."""
 
 import time
-from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -13,12 +12,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
 from app.agents.base import get_model
-from app.schemas import TraceSegment, WeatherReply, WeatherResponse
-
-# Tool timings for the request currently being served. A ContextVar rather than
-# a module global because concurrent requests share this module, and each needs
-# its own list -- asyncio tasks inherit a copy rather than writing to one.
-_tool_timings: ContextVar[list[TraceSegment]] = ContextVar('tool_timings')
+from app.agents.timing import finish, record, start_collecting
+from app.schemas import WeatherReply, WeatherResponse
 
 SYSTEM_PROMPT = (
     'You are a helpful weather assistant, who always cracks jokes and is '
@@ -37,13 +32,6 @@ class Context:
     user_id: str
 
 
-def _record(label: str, started: float) -> None:
-    """Note how long a step took, if anyone is collecting."""
-    timings = _tool_timings.get(None)
-    if timings is not None:
-        timings.append(TraceSegment(label=label, ms=(time.perf_counter() - started) * 1000))
-
-
 @tool('get_weather', return_direct=False, description='Return weather information for a given city.')
 async def get_weather(city: str) -> dict[str, Any]:
     started = time.perf_counter()
@@ -53,7 +41,7 @@ async def get_weather(city: str) -> dict[str, Any]:
             response.raise_for_status()
             return response.json()
     finally:
-        _record('get_weather', started)
+        record('get_weather', started)
 
 
 @tool('locate_user', description="Look up a user's city based on their context")
@@ -62,7 +50,7 @@ def locate_user(runtime: ToolRuntime[Context]) -> str:
     try:
         return _locate(runtime.context.user_id)
     finally:
-        _record('locate_user', started)
+        record('locate_user', started)
 
 
 def _locate(user_id: str) -> str:
@@ -102,8 +90,7 @@ async def ask_weather_agent(user_id: str, thread_id: str) -> WeatherReply:
     derived rather than timed directly -- there is no point in the loop where
     only the model is running that we can wrap.
     """
-    _tool_timings.set([])
-    started = time.perf_counter()
+    started = start_collecting()
 
     config: RunnableConfig = {'configurable': {'thread_id': thread_id}}
     response = await _get_agent().ainvoke(
@@ -118,14 +105,5 @@ async def ask_weather_agent(user_id: str, thread_id: str) -> WeatherReply:
         config=config,
         context=Context(user_id=user_id),
     )
-    total_ms = (time.perf_counter() - started) * 1000
-    tools = _tool_timings.get([])
-    model_ms = total_ms - sum(segment.ms for segment in tools)
-
     reading: WeatherResponse = response['structured_response']
-    return WeatherReply(
-        **reading.model_dump(),
-        # Tool calls in the order the model made them, then whatever time is not
-        # accounted for by them.
-        trace=[*tools, TraceSegment(label='model', ms=max(model_ms, 0.0))],
-    )
+    return WeatherReply(**reading.model_dump(), trace=finish(started))
