@@ -114,19 +114,28 @@ export function ArrivalGlyph({
 }) {
   const tone = active ? "bg-accent" : "bg-border-strong";
   return (
-    <span aria-hidden="true" className="flex h-1.5 w-12 gap-px overflow-hidden rounded-sm">
+    // Taller and wider than the trace rail it miniaturises, with visible gaps
+    // rather than hairlines: at 6px tall the three shapes were indistinguishable
+    // from one another and just read as a dash.
+    <span aria-hidden="true" className="flex h-2 w-14 gap-0.5 overflow-hidden rounded-sm">
       {shape === "segmented" && (
         <>
-          <span className={cx("h-full w-1/5", tone)} />
-          <span className={cx("h-full w-2/5", tone)} />
+          <span className={cx("h-full w-1/6", tone)} />
+          <span className={cx("h-full w-1/4", tone)} />
           <span className={cx("h-full flex-1", tone)} />
         </>
       )}
       {shape === "block" && <span className={cx("h-full w-full", tone)} />}
       {shape === "filling" && (
         <>
-          <span className={cx("h-full w-3/5", tone)} />
-          <span className={cx("h-full flex-1", active ? "bg-signal" : "bg-border-subtle")} />
+          <span className={cx("h-full w-1/2", tone)} />
+          {/* The unfilled tail is what says "still arriving". */}
+          <span
+            className={cx(
+              "h-full flex-1",
+              active ? "bg-signal/40" : "bg-border-subtle",
+            )}
+          />
         </>
       )}
     </span>

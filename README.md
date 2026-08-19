@@ -104,9 +104,9 @@ curl -X POST http://127.0.0.1:8000/api/weather \
   "temperature_fahrenheit": 80.0,
   "humidity": 45.0,
   "trace": [
-    { "label": "locate_user", "ms": 0.003 },
-    { "label": "get_weather", "ms": 180.4 },
-    { "label": "model", "ms": 3781.2 }
+    { "label": "locate_user", "ms": 0.004 },
+    { "label": "get_weather", "ms": 166.1 },
+    { "label": "model", "ms": 4871.5 }
   ]
 }
 ```
