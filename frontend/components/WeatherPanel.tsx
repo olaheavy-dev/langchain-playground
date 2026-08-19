@@ -17,11 +17,11 @@ function Stat({
 }) {
   const missing = value === null;
   return (
-    <div className="rounded-lg border border-border-subtle bg-surface-subtle px-4 py-3">
+    <div className="rounded-md border border-border-subtle bg-surface-subtle px-4 py-3">
       <Label>{label}</Label>
       <p
         className={cx(
-          "mt-1.5 font-sans text-2xl tabular-nums tracking-tight",
+          "mt-1.5 font-sans text-xl tabular-nums tracking-tight",
           missing ? "text-text-faint" : "text-text",
         )}
       >
@@ -94,7 +94,7 @@ export function WeatherPanel() {
                   aria-checked={selected}
                   onClick={() => setUserId(user.id)}
                   className={cx(
-                    "rounded-lg border px-3.5 py-2 text-left transition-colors duration-150",
+                    "rounded-md border px-3.5 py-2 text-left transition-colors duration-150",
                     selected
                       ? "border-accent bg-accent-tint"
                       : "border-border-subtle hover:border-border-strong hover:bg-surface-subtle",
@@ -102,7 +102,7 @@ export function WeatherPanel() {
                 >
                   <span
                     className={cx(
-                      "block font-mono text-[13px]",
+                      "block font-mono text-sm",
                       selected ? "text-accent" : "text-text",
                     )}
                   >
@@ -117,13 +117,13 @@ export function WeatherPanel() {
           </div>
         </fieldset>
 
-        <p className="mt-5 text-sm leading-relaxed text-text-muted">
+        <p className="mt-5 text-base leading-relaxed text-text-muted">
           The city is never sent. The agent calls{" "}
-          <code className="rounded bg-surface-subtle px-1.5 py-0.5 font-mono text-[13px] text-text">
+          <code className="rounded-sm bg-surface-subtle px-1.5 py-0.5 font-mono text-sm text-text">
             locate_user
           </code>{" "}
           to resolve the id, then feeds the result into{" "}
-          <code className="rounded bg-surface-subtle px-1.5 py-0.5 font-mono text-[13px] text-text">
+          <code className="rounded-sm bg-surface-subtle px-1.5 py-0.5 font-mono text-sm text-text">
             get_weather
           </code>
           .
@@ -141,7 +141,7 @@ export function WeatherPanel() {
         <Card className="fade-rise overflow-hidden">
           <div className="border-b border-border-subtle px-6 py-5">
             <Label>Summary</Label>
-            <p className="mt-2 text-[15px] leading-relaxed text-text">
+            <p className="mt-2 text-base leading-relaxed text-text">
               {result.summary}
             </p>
           </div>
@@ -153,9 +153,9 @@ export function WeatherPanel() {
           </div>
 
           {!located && (
-            <p className="border-t border-border-subtle bg-surface-subtle px-6 py-3.5 text-sm text-text-muted">
+            <p className="border-t border-border-subtle bg-surface-subtle px-6 py-3.5 text-base text-text-muted">
               The agent could not place this user, so it returned{" "}
-              <code className="font-mono text-[13px]">null</code> for every
+              <code className="font-mono text-sm">null</code> for every
               reading rather than inventing one.
             </p>
           )}

@@ -81,6 +81,41 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.24);
 }
 
+/*
+  Type and radius scales, defined once so a size is chosen from a list rather
+  than typed as an arbitrary value. Before this there were eight font sizes
+  (11, 12, 13, 14, 15, 16, 24, 30) and five radii, several of them one-offs
+  written inline -- the drift you get from nudging until it looks right.
+
+  Six steps, each with a job:
+    xs   labels, captions, taglines, hints
+    sm   code and mono
+    base body text and controls
+    lg   headings inside model output
+    xl   figures
+    2xl  the page title
+*/
+@theme {
+  --text-xs: 0.75rem;      /* 12px */
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.8125rem;    /* 13px */
+  --text-sm--line-height: 1.5;
+  --text-base: 0.9375rem;  /* 15px */
+  --text-base--line-height: 1.65;
+  --text-lg: 1.0625rem;    /* 17px */
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.5rem;       /* 24px */
+  --text-xl--line-height: 1.2;
+  --text-2xl: 1.875rem;    /* 30px */
+  --text-2xl--line-height: 1.15;
+
+  /* Three radii, applied by element type: inline marks, controls, cards.
+     rounded-full stays for dots and pills -- a shape, not a fourth step. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
@@ -107,6 +142,9 @@
 body {
   background: var(--canvas);
   color: var(--text);
+  /* The base step, so text with no size class still lands on the scale rather
+     than inheriting the browser's 16px. */
+  font-size: var(--text-base);
 }
 
 /* One focus ring, applied consistently to every interactive element. Full accent

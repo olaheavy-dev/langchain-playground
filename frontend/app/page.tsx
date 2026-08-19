@@ -68,7 +68,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <LogoMark className="text-accent" />
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold tracking-tight text-text">
+            <p className="truncate text-base font-semibold tracking-tight text-text">
               LangChain Playground
             </p>
             <p className="truncate text-xs text-text-faint">Three agent patterns</p>
@@ -85,7 +85,7 @@ export default function Home() {
                 onClick={() => setActiveId(agent.id)}
                 aria-current={selected ? "page" : undefined}
                 className={cx(
-                  "group flex items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150",
+                  "group flex items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150",
                   selected ? "bg-accent-tint" : "hover:bg-surface-subtle",
                 )}
               >
@@ -100,7 +100,7 @@ export default function Home() {
                 <span className="min-w-0">
                   <span
                     className={cx(
-                      "block text-sm font-medium",
+                      "block text-base font-medium",
                       selected ? "text-accent" : "text-text",
                     )}
                   >
@@ -126,13 +126,13 @@ export default function Home() {
       <main className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-10 lg:px-12 lg:py-14">
           <header className="mb-8">
-            <span className="inline-flex items-center rounded-full border border-border-subtle px-2.5 py-1 font-mono text-[11px] text-text-muted">
+            <span className="inline-flex items-center rounded-full border border-border-subtle px-2.5 py-1 font-mono text-xs text-text-muted">
               {active.endpoint}
             </span>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-text">
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-text">
               {active.title}
             </h1>
-            <p className="mt-2.5 max-w-xl text-[15px] leading-relaxed text-text-muted">
+            <p className="mt-2.5 max-w-xl text-base leading-relaxed text-text-muted">
               {active.description}
             </p>
           </header>

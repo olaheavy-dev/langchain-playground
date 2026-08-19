@@ -22,8 +22,8 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5",
-        "text-sm font-medium transition-colors duration-150",
+        "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5",
+        "text-base font-medium transition-colors duration-150",
         "disabled:cursor-not-allowed disabled:opacity-45",
         variant === "primary" &&
           "bg-accent text-accent-contrast hover:bg-accent-hover",
@@ -67,7 +67,7 @@ export function Card({
   return (
     <div
       className={cx(
-        "rounded-xl border border-border-subtle bg-surface shadow-card",
+        "rounded-lg border border-border-subtle bg-surface shadow-card",
         className,
       )}
     >
@@ -86,8 +86,8 @@ export function Textarea({
       className={cx(
         // border-interactive, not border-subtle: this border is the only thing
         // that says "input", so it has to clear 3:1.
-        "w-full resize-none rounded-lg border border-border-interactive bg-surface",
-        "px-4 py-3 text-[15px] leading-relaxed text-text",
+        "w-full resize-none rounded-md border border-border-interactive bg-surface",
+        "px-4 py-3 text-base leading-relaxed text-text",
         "placeholder:text-text-faint",
         "transition-colors duration-150 hover:border-border-strong",
         className,
@@ -108,7 +108,7 @@ export function ErrorNote({ message }: { message: string }) {
   return (
     <p
       role="alert"
-      className="fade-rise flex items-start gap-2 text-sm text-negative"
+      className="fade-rise flex items-start gap-2 text-base text-negative"
     >
       <svg viewBox="0 0 16 16" className="mt-0.5 size-4 shrink-0" fill="currentColor" aria-hidden="true">
         <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM7.25 4.5h1.5v5h-1.5v-5Zm0 6.25h1.5v1.5h-1.5v-1.5Z" />
