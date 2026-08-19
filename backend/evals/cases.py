@@ -207,6 +207,17 @@ CASES: list[Case] = [
         tags=['rag'],
     ),
     Case(
+        name='rag: defines a term from the glossary',
+        why=(
+            'The glossary and the design notes discuss the same machinery in the '
+            'same words, so a question about a term has to find the entry that '
+            'defines it rather than the decision that mentions it in passing.'
+        ),
+        run=_rag('What is a checkpointer?'),
+        check=_both(_cited('glossary.md'), _mentions('thread')),
+        tags=['rag'],
+    ),
+    Case(
         name='rag: declines what the knowledge base cannot answer',
         why='Answering from the model instead is the failure RAG exists to prevent.',
         run=_rag('Who wrote this project and where do they live?'),
