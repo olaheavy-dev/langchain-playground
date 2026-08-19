@@ -21,6 +21,19 @@ from app.agents.weather import Context  # noqa: E402
 from app.main import app  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def fresh_rate_limiter() -> None:
+    """Rebuild the middleware stack before each test.
+
+    The rate limiter keeps its counters in the middleware instance, which the
+    app holds for its whole life. Without this every test in the session shares
+    one allowance, and whichever tests happen to run twentieth start failing --
+    a good demonstration of why the limiter's process-global state is called out
+    in its own docstring.
+    """
+    app.middleware_stack = app.build_middleware_stack()
+
+
 @pytest.fixture
 async def client() -> AsyncIterator[httpx.AsyncClient]:
     """Drives the app in-process over ASGI, so no port is bound and no server
