@@ -15,6 +15,7 @@ TypeScript · Tailwind CSS v4 · pytest · Vitest
 | Tool-calling agent | `app/agents/weather.py` | several segments | The model decides when to call your own functions, and fills a typed response |
 | Chat model | `app/agents/python_copilot.py` | one block | One request, one complete answer |
 | Agentic retrieval | `app/agents/rag.py` | searches, then generation | The model decides whether to search the docs, and cites what it found |
+| Streamed agent progress | `app/routers/progress_stream.py` | the rail drawing itself | Each step reported as it finishes, rather than a spinner until the end |
 | Streaming chat model | `app/agents/streaming_copilot.py` | a filling rail | The same answer, sent token by token as it is produced |
 
 The interface is built around that third column. Each pattern is labelled in the sidebar by
@@ -239,6 +240,33 @@ curl -X POST http://127.0.0.1:8000/api/copilot/python \
 ```json
 { "answer": "Python was first released in 1991 by its creator Guido van Rossum." }
 ```
+
+### `POST /api/weather/stream` and `POST /api/rag/stream`
+
+The same work, reporting each step as it finishes rather than after the answer is ready.
+An agent that calls two tools takes several seconds, and a spinner says nothing about which
+of them is slow.
+
+```
+data: {"type": "step", "label": "model", "ms": 1023.4, "start_ms": 2.1}
+
+data: {"type": "step", "label": "locate_user", "ms": 0.9, "start_ms": 1028.0}
+
+data: {"type": "step", "label": "get_weather", "ms": 176.2, "start_ms": 2352.7}
+
+data: {"type": "result", "reply": { ... }}
+```
+
+The interface draws the trace as those arrive, so the rail fills in while the agent works.
+
+A failure travels as `{"type": "error"}` rather than a status code, because by the time it
+happens the response has already begun and the status is long since sent.
+
+**The agent is not cancelled when the client disconnects.** Stopping it between a tool call
+being requested and its result being recorded leaves an unanswered tool call in the
+checkpoint, and that state is replayed on every later request — so one closed tab would
+break that thread permanently. Letting the run finish costs one answer nobody reads, which
+is cheaper than a conversation that can never be used again.
 
 ### `POST /api/rag`
 
