@@ -147,7 +147,10 @@ separate one SSE message from the next.
 
 ## Tests
 
-75 tests, none of which call a model or the network.
+75 tests, none of which call a model or the network. Both suites, plus lint, a typecheck
+and a production build, run on every push and pull request
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) -- no API key needed, because
+nothing in the suite reaches a model.
 
 ```bash
 cd backend  && uv run pytest      # 29 tests
