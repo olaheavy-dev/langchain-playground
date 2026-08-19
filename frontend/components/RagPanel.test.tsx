@@ -221,3 +221,32 @@ describe("Trace usage", () => {
     expect(await screen.findByText(/cost unknown/)).toBeInTheDocument();
   });
 });
+
+describe("Suggestions", () => {
+  it("offers a question of each kind the corpus can answer", () => {
+    // Five of the same shape would demonstrate one thing five times. These are
+    // a description, two definitions from the glossary, a why, and one the
+    // knowledge base cannot answer at all.
+    render(<RagPanel />);
+
+    for (const question of [
+      /how does the streaming endpoint work/i,
+      /what is a checkpointer/i,
+      /tool call and a tool message/i,
+      /why is the total time not the sum/i,
+      /who wrote this project/i,
+    ]) {
+      expect(screen.getByRole("button", { name: question })).toBeInTheDocument();
+    }
+  });
+
+  it("fills the box from a suggestion", async () => {
+    render(<RagPanel />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /what is a checkpointer/i }),
+    );
+
+    expect(screen.getByRole("textbox")).toHaveValue("What is a checkpointer?");
+  });
+});

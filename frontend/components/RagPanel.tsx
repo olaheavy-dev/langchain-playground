@@ -9,8 +9,15 @@ import { Markdown } from "./Markdown";
 import { Trace, type TraceSegment } from "./Trace";
 import { Button, Card, ErrorNote, Label, Textarea, isSubmitShortcut } from "./ui";
 
+/**
+ * One per shape of question the corpus can be asked, rather than five of the
+ * same kind: a description of a pattern, two definitions from the glossary, a
+ * why, and one the knowledge base cannot answer at all.
+ */
 const SUGGESTIONS = [
   "How does the streaming endpoint work?",
+  "What is a checkpointer?",
+  "What is the difference between a tool call and a tool message?",
   "Why is the total time not the sum of the segments?",
   "Who wrote this project?",
 ];
@@ -96,7 +103,7 @@ export function RagPanel() {
             }
           }}
           rows={3}
-          placeholder="Ask about this project — its patterns, its API, its decisions…"
+          placeholder="Ask about this project — its patterns, its vocabulary, its decisions…"
           className="mt-3"
         />
 
