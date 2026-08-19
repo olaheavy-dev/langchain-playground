@@ -55,6 +55,11 @@ async def test_returns_the_agents_reading(
         'humidity': 84.0,
         'trace': {
             'total_ms': 2300.0,
+            'input_tokens': 0,
+            'output_tokens': 0,
+            'cached_input_tokens': 0,
+            'model_calls': 0,
+            'cost_usd': None,
             'segments': [
                 {'label': 'locate_user', 'ms': 0.4, 'start_ms': 10.0},
                 {'label': 'get_weather', 'ms': 812.0, 'start_ms': 20.0},

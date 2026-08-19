@@ -42,6 +42,12 @@ export function WeatherPanel() {
   const [loading, setLoading] = useState(false);
   const [trace, setTrace] = useState<TraceSegment[] | null>(null);
   const [totalMs, setTotalMs] = useState(0);
+  const [usage, setUsage] = useState<{
+    inputTokens: number;
+    outputTokens: number;
+    modelCalls: number;
+    costUsd: number | null;
+  } | null>(null);
   const groupId = useId();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -76,6 +82,14 @@ export function WeatherPanel() {
       // shifts along by the time the request spent on the wire.
       const networkMs = Math.max(roundTrip - serverMs, 0);
       setTotalMs(roundTrip);
+      if (reply.trace) {
+        setUsage({
+          inputTokens: reply.trace.input_tokens,
+          outputTokens: reply.trace.output_tokens,
+          modelCalls: reply.trace.model_calls,
+          costUsd: reply.trace.cost_usd,
+        });
+      }
       setTrace([
         { label: "network", ms: networkMs, startMs: 0 },
         ...(reply.trace?.segments ?? []).map((segment) => ({
@@ -181,7 +195,7 @@ export function WeatherPanel() {
 
           {trace && (
             <div className="border-t border-border-subtle px-6 pt-1 pb-6">
-              <Trace segments={trace} totalMs={totalMs} />
+              <Trace segments={trace} totalMs={totalMs} usage={usage ?? undefined} />
             </div>
           )}
 

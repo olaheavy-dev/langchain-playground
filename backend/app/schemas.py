@@ -43,6 +43,17 @@ class Trace(BaseModel):
     total_ms: float
     segments: list[TraceSegment] = []
 
+    input_tokens: int = 0
+    output_tokens: int = 0
+    # Input the provider served from its own cache, billed at a discount. Part
+    # of input_tokens rather than additional to it.
+    cached_input_tokens: int = 0
+    model_calls: int = 0
+    # None when no price is on file for the model, which is not the same as
+    # free. Covers model calls only: embedding a search query costs a fraction
+    # of a cent and is not reported here rather than being guessed at.
+    cost_usd: float | None = None
+
 
 class WeatherReply(WeatherResponse):
     """What the endpoint returns: the reading, plus a measured account of how it

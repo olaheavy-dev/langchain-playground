@@ -156,6 +156,12 @@ export function RagPanel() {
           {reply.trace && (
             <Trace
               totalMs={reply.trace.total_ms}
+              usage={{
+                inputTokens: reply.trace.input_tokens,
+                outputTokens: reply.trace.output_tokens,
+                modelCalls: reply.trace.model_calls,
+                costUsd: reply.trace.cost_usd,
+              }}
               segments={reply.trace.segments.map((segment) => ({
                 label: segment.label,
                 ms: segment.ms,
