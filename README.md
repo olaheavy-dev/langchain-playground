@@ -99,10 +99,10 @@ curl -X POST http://127.0.0.1:8000/api/weather \
 
 ```json
 {
-  "summary": "Currently in Vienna, it's about 17°C (63°F) with light rain showers...",
-  "temperature_celsius": 17.0,
-  "temperature_fahrenheit": 63.0,
-  "humidity": 84.0
+  "summary": "In Vienna, it's currently 27°C (80°F) with patchy rain nearby. Humidity is at 45%...",
+  "temperature_celsius": 27.0,
+  "temperature_fahrenheit": 80.0,
+  "humidity": 45.0
 }
 ```
 
