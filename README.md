@@ -1,5 +1,7 @@
 # LangChain Playground
 
+[![CI](https://github.com/olaheavy-dev/langchain-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/olaheavy-dev/langchain-playground/actions/workflows/ci.yml)
+
 A full-stack reference implementation of three distinct LLM integration patterns, built to
 make the differences between them visible and comparable side by side.
 
